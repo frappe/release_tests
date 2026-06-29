@@ -34,6 +34,7 @@ class SmokeSuite:
 
     name: str = ""
     required_app: str | None = None
+    description: str = ""
 
     def applies(self, versions: Versions) -> bool:
         """Whether this suite should run against a site with these app versions.

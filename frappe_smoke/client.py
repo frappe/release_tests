@@ -40,6 +40,11 @@ class FrappeClient:
         self.url = url.rstrip("/")
         self.timeout = timeout
         self.session = requests.Session()
+        # Don't read proxy/CA config from the environment or the OS. We hit known
+        # URLs directly, and on macOS the system-proxy lookup (_scproxy) aborts
+        # with SIGABRT when requests runs inside a forked process (e.g. an RQ
+        # work-horse). Disabling it keeps runs working under background workers.
+        self.session.trust_env = False
         # Local benches are multi-tenant by Host header. Send an explicit Host so
         # the correct site is served regardless of local DNS / hosts entries.
         host = host_header or urlsplit(self.url).hostname

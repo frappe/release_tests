@@ -62,6 +62,7 @@ def _verify_outstanding(client: FrappeClient, ctx: dict) -> None:
 class ERPNextSuite(SmokeSuite):
     name = "erpnext"
     required_app = "erpnext"
+    description = "Sales flow: ensure Company/Customer/Item, submit a Sales Invoice and a Payment Entry, verify the invoice is settled."
 
     def build_steps(self, versions: Versions) -> list[Step]:
         return [

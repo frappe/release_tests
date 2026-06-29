@@ -30,6 +30,7 @@ def _leave_types_present(client: FrappeClient, ctx: dict) -> None:
 class HRMSSuite(SmokeSuite):
     name = "hrms"
     required_app = "hrms"
+    description = "HR basics: create an Employee, read it back Active, and confirm Leave Type fixtures migrated."
 
     def build_steps(self, versions: Versions) -> list[Step]:
         return [

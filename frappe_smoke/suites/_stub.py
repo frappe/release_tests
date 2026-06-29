@@ -27,6 +27,10 @@ class StubSuite(SmokeSuite):
 
     probe_doctype: str = ""
 
+    @property
+    def description(self) -> str:  # type: ignore[override]
+        return f"Stub: reachability probe ({self.probe_doctype}). Expand into real flows later."
+
     def build_steps(self, versions: Versions) -> list[Step]:
         return [Step(f"{self.required_app} reachable ({self.probe_doctype})",
                      _reachable(self.probe_doctype))]

@@ -40,6 +40,7 @@ def _delete_todo(client: FrappeClient, ctx: dict) -> None:
 class CoreFrappeSuite(SmokeSuite):
     name = "core_frappe"
     required_app = "frappe"
+    description = "Framework basics: authenticated login, whoami, and a ToDo create/read/delete round-trip."
 
     def build_steps(self, versions: Versions) -> list[Step]:
         return [

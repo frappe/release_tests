@@ -84,9 +84,14 @@ def run_target(
     client: FrappeClient,
     *,
     only_suite: str | None = None,
+    suite_filter: set[str] | None = None,
     continue_on_fail: bool = False,
 ) -> TargetResult:
-    """Detect installed apps/versions, then run every applicable suite."""
+    """Detect installed apps/versions, then run every applicable suite.
+
+    ``only_suite`` runs just one named suite; ``suite_filter`` restricts to a set
+    of suite names (used by the smoke_console control plane to run a selection).
+    """
     target_result = TargetResult(label=label, url=url)
     try:
         versions = client.get_versions()
@@ -97,6 +102,8 @@ def run_target(
 
     for suite in all_suites():
         if only_suite and suite.name != only_suite:
+            continue
+        if suite_filter is not None and suite.name not in suite_filter:
             continue
         target_result.suites.append(
             run_suite(client, suite, versions, continue_on_fail=continue_on_fail)
