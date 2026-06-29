@@ -1,0 +1,17 @@
+# Local target credentials — never commit
+targets.toml
+
+# Run artifacts
+results/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/

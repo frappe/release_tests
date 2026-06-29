@@ -1,0 +1,41 @@
+[project]
+name = "frappe_smoke"
+description = "External HTTP smoke-test harness for Frappe sites — logs in over REST and exercises per-app flows across multiple versions (develop / v16 / v15)."
+authors = [
+    { name = "Frappe Smoke Contributors", email = "umair_sayyed@yahoo.com" },
+]
+requires-python = ">=3.10"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = [
+    "requests>=2.28",
+    "packaging>=21.0",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "responses>=0.23",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+frappe-smoke = "frappe_smoke.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "frappe_smoke/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["frappe_smoke"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
