@@ -52,6 +52,8 @@ class FrappeClient:
             self.session.headers["Host"] = host
         self.session.headers["Accept"] = "application/json"
         self.logged_in_user: str | None = None
+        # Counts submitted documents — a proxy for "transactions created" in a run.
+        self.submitted_count = 0
 
     # ------------------------------------------------------------------ auth
     def use_token(self, api_key: str, api_secret: str) -> None:
@@ -128,7 +130,9 @@ class FrappeClient:
 
     def submit(self, doc: dict[str, Any]) -> dict[str, Any]:
         """Submit a document via the whitelisted ``frappe.client.submit``."""
-        return self.call("frappe.client.submit", doc=_json(doc))
+        result = self.call("frappe.client.submit", doc=_json(doc))
+        self.submitted_count += 1
+        return result
 
     def cancel(self, doctype: str, name: str) -> dict[str, Any]:
         """Cancel a submitted document."""

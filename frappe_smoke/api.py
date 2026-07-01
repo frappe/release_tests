@@ -72,4 +72,6 @@ def run_site(
         suite_filter=set(suites) if suites else None,
         continue_on_fail=continue_on_fail,
     )
-    return dataclasses.asdict(result)
+    data = dataclasses.asdict(result)
+    data["transactions"] = client.submitted_count
+    return data

@@ -17,11 +17,17 @@ SMOKE_COMPANY_ABBR = "STC"
 SMOKE_CUSTOMER = "Smoke Test Customer"
 SMOKE_ITEM = "SMOKE-ITEM"
 SMOKE_STOCK_ITEM = "SMOKE-STOCK-ITEM"
+SMOKE_SERIAL_ITEM = "SMOKE-SERIAL-ITEM"
+SMOKE_BATCH_ITEM = "SMOKE-BATCH-ITEM"
+SMOKE_SERVICE_ITEM = "SMOKE-SERVICE-ITEM"
+SMOKE_FG_ITEM = "SMOKE-FG-ITEM"
+SMOKE_RAW_ITEM = "SMOKE-RAW-ITEM"
 SMOKE_WAREHOUSE = "Smoke Warehouse"
 SMOKE_SUPPLIER = "Smoke Test Supplier"
 SMOKE_EMPLOYEE = "Smoke Test Employee"
 SMOKE_EMPLOYEE_2 = "Smoke Report Employee"
 SMOKE_LEAVE_TYPE = "Smoke Leave Type"
+SMOKE_EXPENSE_TYPE = "Smoke Expense Type"
 
 
 def _get_or_create(client: FrappeClient, doctype: str, name: str, doc: dict[str, Any]) -> str:
@@ -275,3 +281,147 @@ def ensure_leave_period(client: FrappeClient, company: str) -> str:
             "is_active": 1,
         }
     )["name"]
+
+
+# ------------------------------------------------------- item types + mfg
+def _company_currency(client: FrappeClient, company: str) -> str:
+    row = client.get_list("Company", filters={"name": company}, fields=["default_currency"], limit=1)
+    return (row and row[0].get("default_currency")) or "INR"
+
+
+def _new_item(client: FrappeClient, code: str, name: str, extra: dict[str, Any]) -> str:
+    existing = client.get_list("Item", filters={"name": code}, fields=["name"], limit=1)
+    if existing:
+        return existing[0]["name"]
+    doc = {
+        "doctype": "Item",
+        "item_code": code,
+        "item_name": name,
+        "item_group": "All Item Groups",
+        "stock_uom": "Nos",
+        **extra,
+    }
+    hsn = _hsn_code(client)
+    if hsn:
+        doc["gst_hsn_code"] = hsn
+    return client.insert(doc)["name"]
+
+
+def ensure_serialised_item(client: FrappeClient, company: str, warehouse: str) -> str:
+    return _new_item(
+        client,
+        SMOKE_SERIAL_ITEM,
+        "Smoke Serial Item",
+        {
+            "is_stock_item": 1,
+            "has_serial_no": 1,
+            "serial_no_series": "SMK-SER-.#####",
+            "item_defaults": [{"company": company, "default_warehouse": warehouse}],
+        },
+    )
+
+
+def ensure_batched_item(client: FrappeClient, company: str, warehouse: str) -> str:
+    return _new_item(
+        client,
+        SMOKE_BATCH_ITEM,
+        "Smoke Batch Item",
+        {
+            "is_stock_item": 1,
+            "has_batch_no": 1,
+            "create_new_batch": 1,
+            "batch_number_series": "SMK-BATCH-.#####",
+            "item_defaults": [{"company": company, "default_warehouse": warehouse}],
+        },
+    )
+
+
+def ensure_service_item(client: FrappeClient) -> str:
+    return _new_item(client, SMOKE_SERVICE_ITEM, "Smoke Service Item", {"is_stock_item": 0})
+
+
+def ensure_serial_batch_enabled(client: FrappeClient) -> None:
+    """Turn on Stock Settings' master serial/batch toggle if it's off (site-wide)."""
+    settings = client.get_doc("Stock Settings", "Stock Settings")
+    if not settings.get("enable_serial_and_batch_no_for_item"):
+        client.call(
+            "frappe.client.set_value",
+            doctype="Stock Settings",
+            name="Stock Settings",
+            fieldname="enable_serial_and_batch_no_for_item",
+            value=1,
+        )
+
+
+def ensure_named_warehouse(client: FrappeClient, company: str, base_name: str) -> str:
+    abbr = client.get_list("Company", filters={"name": company}, fields=["abbr"], limit=1)[0]["abbr"]
+    name = f"{base_name} - {abbr}"
+    existing = client.get_list("Warehouse", filters={"name": name}, fields=["name"], limit=1)
+    if existing:
+        return existing[0]["name"]
+    return client.insert(
+        {"doctype": "Warehouse", "warehouse_name": base_name, "company": company}
+    )["name"]
+
+
+def ensure_fg_item(client: FrappeClient, company: str, warehouse: str) -> str:
+    return _new_item(
+        client,
+        SMOKE_FG_ITEM,
+        "Smoke Finished Good",
+        {"is_stock_item": 1, "item_defaults": [{"company": company, "default_warehouse": warehouse}]},
+    )
+
+
+def ensure_raw_item(client: FrappeClient, company: str, warehouse: str) -> str:
+    return _new_item(
+        client,
+        SMOKE_RAW_ITEM,
+        "Smoke Raw Material",
+        {"is_stock_item": 1, "item_defaults": [{"company": company, "default_warehouse": warehouse}]},
+    )
+
+
+def ensure_manufacturing_warehouses(client: FrappeClient, company: str) -> dict[str, str]:
+    return {
+        "source": ensure_named_warehouse(client, company, "Smoke Source WH"),
+        "wip": ensure_named_warehouse(client, company, "Smoke WIP WH"),
+        "fg": ensure_named_warehouse(client, company, "Smoke FG WH"),
+    }
+
+
+def ensure_bom(client: FrappeClient, company: str, fg_item: str, raw_items: list[tuple]) -> str:
+    """Get-or-create a submitted, active BOM. ``raw_items`` = [(item_code, qty, rate), ...]."""
+    existing = client.get_list(
+        "BOM",
+        filters={"item": fg_item, "is_active": 1, "docstatus": 1},
+        fields=["name"],
+        limit=1,
+    )
+    if existing:
+        return existing[0]["name"]
+    doc = {
+        "doctype": "BOM",
+        "item": fg_item,
+        "quantity": 1,
+        "company": company,
+        "currency": _company_currency(client, company),
+        "conversion_rate": 1,
+        "with_operations": 0,
+        "is_active": 1,
+        "is_default": 1,
+        "items": [
+            {"item_code": code, "qty": qty, "uom": "Nos", "rate": rate}
+            for code, qty, rate in raw_items
+        ],
+    }
+    return client.submit({**client.insert(doc)})["name"]
+
+
+def ensure_expense_claim_type(client: FrappeClient) -> str:
+    return _get_or_create(
+        client,
+        "Expense Claim Type",
+        SMOKE_EXPENSE_TYPE,
+        {"expense_type": SMOKE_EXPENSE_TYPE},
+    )
