@@ -97,6 +97,7 @@ class FrappeClient:
         *,
         filters: list | dict | None = None,
         fields: list[str] | None = None,
+        order_by: str | None = None,
         limit: int = 20,
     ) -> list[dict[str, Any]]:
         params: dict[str, Any] = {"limit_page_length": limit}
@@ -104,6 +105,8 @@ class FrappeClient:
             params["filters"] = _json(filters)
         if fields is not None:
             params["fields"] = _json(fields)
+        if order_by is not None:
+            params["order_by"] = order_by
         resp = self.session.get(
             f"{self.url}/api/resource/{doctype}",
             params=params,
@@ -126,6 +129,14 @@ class FrappeClient:
     def submit(self, doc: dict[str, Any]) -> dict[str, Any]:
         """Submit a document via the whitelisted ``frappe.client.submit``."""
         return self.call("frappe.client.submit", doc=_json(doc))
+
+    def cancel(self, doctype: str, name: str) -> dict[str, Any]:
+        """Cancel a submitted document."""
+        return self.call("frappe.client.cancel", doctype=doctype, name=name)
+
+    def delete(self, doctype: str, name: str) -> Any:
+        """Delete a document."""
+        return self.call("frappe.client.delete", doctype=doctype, name=name)
 
     def call(self, method: str, **kwargs: Any) -> Any:
         """POST to ``/api/method/<method>`` and return the ``message`` payload."""

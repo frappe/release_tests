@@ -50,7 +50,7 @@ class FakeClient:
         self.calls.append(("get_doc", doctype, name))
         return self._store.get(f"{doctype}:{name}", {})
 
-    def get_list(self, doctype, *, filters=None, fields=None, limit=20):
+    def get_list(self, doctype, *, filters=None, fields=None, order_by=None, limit=20):
         self.calls.append(("get_list", doctype))
         return [v for k, v in self._store.items() if k.startswith(f"{doctype}:")][:limit]
 
