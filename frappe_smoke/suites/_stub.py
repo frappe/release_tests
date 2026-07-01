@@ -15,9 +15,13 @@ from .base import SmokeSuite, Step
 
 def _reachable(doctype: str):
     def step(client: FrappeClient, ctx: dict) -> None:
-        # A successful list call proves the doctype migrated and the app's data
-        # layer responds — a deliberately shallow check for a stub.
-        client.get_list(doctype, fields=["name"], limit=1)
+        # Confirm the app migrated its schema by checking the probe DocType is
+        # registered. We query the DocType master (always a real table) rather
+        # than listing the doctype itself, because Single doctypes (e.g. "GST
+        # Settings") have no list table and would 500 on /api/resource/<name>.
+        found = client.get_list("DocType", filters={"name": doctype}, fields=["name"], limit=1)
+        if not found:
+            raise AssertionError(f"DocType {doctype!r} not found — app not fully migrated?")
 
     return step
 
