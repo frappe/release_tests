@@ -16,7 +16,9 @@ describe("v15 · Sales Invoice", () => {
       .first()
       .click()
       .type(Cypress.env("item"), { delay: 80 });
-    cy.get(".awesomplete li:visible", { timeout: 20000 }).contains(Cypress.env("item")).click();
+    cy.get(".awesomplete li:visible", { timeout: 20000 })
+      .contains(Cypress.env("item"))
+      .click({ force: true });
 
     cy.get("body").type("{ctrl}s");
     cy.get(".title-area .title-text", { timeout: 30000 })

@@ -8,6 +8,9 @@ module.exports = defineConfig({
     baseUrl: process.env.CYPRESS_BASE_URL || "http://mysite.localhost:8000",
     specPattern: "cypress/e2e/**/*.cy.js",
     supportFile: "cypress/support/e2e.js",
+    // Roomy viewport so grid rows / dropdowns stay on-screen (less scrolling).
+    viewportWidth: 1440,
+    viewportHeight: 900,
     video: false,
     screenshotOnRunFailure: true,
     defaultCommandTimeout: 15000,

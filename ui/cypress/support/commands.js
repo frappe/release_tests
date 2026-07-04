@@ -20,7 +20,7 @@ Cypress.Commands.add("apiLogin", (usr, pwd) => {
 // never match a stale/empty awesomplete list belonging to another field.
 Cypress.Commands.add("fillLink", (fieldname, value) => {
   cy.get(`[data-fieldname="${fieldname}"] input:visible`).first().click().clear().type(value, { delay: 80 });
-  cy.get(`[data-fieldname="${fieldname}"] .awesomplete li:visible`, { timeout: 20000 })
-    .contains(value)
-    .click();
+  // The open awesomplete list is the only one with visible <li>; match globally
+  // (v16 can render it outside the field wrapper) and force-click past any scroll.
+  cy.get(".awesomplete li:visible", { timeout: 20000 }).contains(value).click({ force: true });
 });
