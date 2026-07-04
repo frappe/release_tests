@@ -15,12 +15,12 @@ Cypress.Commands.add("apiLogin", (usr, pwd) => {
 });
 
 // Fill a Frappe Link field by fieldname and pick the matching awesomplete option.
-// Click to focus/open the control, then type slowly so Frappe's debounced
-// search_link fires, and pick from THIS field's own (visible) dropdown so we
-// never match a stale/empty awesomplete list belonging to another field.
 Cypress.Commands.add("fillLink", (fieldname, value) => {
-  cy.get(`[data-fieldname="${fieldname}"] input:visible`).first().click().clear().type(value, { delay: 80 });
-  // The open awesomplete list is the only one with visible <li>; match globally
-  // (v16 can render it outside the field wrapper) and force-click past any scroll.
-  cy.get(".awesomplete li:visible", { timeout: 20000 }).contains(value).click({ force: true });
+  const input = `[data-fieldname="${fieldname}"] input:visible`;
+  cy.get(input).first().scrollIntoView().click();
+  cy.wait(300); // let the control open before typing, else the first keystrokes get dropped
+  cy.get(input).first().clear().type(value, { delay: 100 });
+  // Match by text + force-click. Do NOT filter by :visible — Cypress mis-flags
+  // awesomplete's absolutely-positioned <ul> as hidden, so :visible matches nothing.
+  cy.get(".awesomplete li", { timeout: 20000 }).contains(value).click({ force: true });
 });

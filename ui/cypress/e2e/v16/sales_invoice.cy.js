@@ -12,13 +12,11 @@ describe("v16 · Sales Invoice", () => {
 
     // Add an item row and pick an existing item.
     cy.get('[data-fieldname="items"] .grid-add-row', { timeout: 20000 }).click();
-    cy.get('[data-fieldname="items"] .grid-body [data-fieldname="item_code"] input:visible')
-      .first()
-      .click()
-      .type(Cypress.env("item"), { delay: 80 });
-    cy.get(".awesomplete li:visible", { timeout: 20000 })
-      .contains(Cypress.env("item"))
-      .click({ force: true });
+    const itemInput = '[data-fieldname="items"] .grid-body [data-fieldname="item_code"] input:visible';
+    cy.get(itemInput).first().scrollIntoView().click();
+    cy.wait(300);
+    cy.get(itemInput).first().clear().type(Cypress.env("item"), { delay: 100 });
+    cy.get(".awesomplete li", { timeout: 20000 }).contains(Cypress.env("item")).click({ force: true });
 
     // Save (Ctrl/Cmd+S) and confirm it left the "New" state (got a name).
     cy.get("body").type("{ctrl}s");
