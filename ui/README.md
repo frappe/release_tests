@@ -31,6 +31,11 @@ npx cypress run --spec 'cypress/e2e/v16/**/*.cy.js'
 npm run cy:open                          # interactive runner
 ```
 
+Each spec drops a screenshot in `cypress/screenshots/` (e.g.
+`v16-sales-invoice-created.png`, `v16-login-desk.png`) plus one automatically on
+any failure — handy to attach to a pull request. Videos are recorded when run via
+Release Manager (`run.js` sets `video: true`).
+
 There is no local v15 site on this one-app-version bench, so the **v15 specs are
 structure-only** until you point `CYPRESS_BASE_URL` at a real v15 site.
 

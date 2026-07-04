@@ -15,12 +15,13 @@ describe("v15 · Sales Invoice", () => {
     cy.get('[data-fieldname="items"] .grid-body [data-fieldname="item_code"] input:visible')
       .first()
       .click()
-      .type(Cypress.env("item"));
-    cy.get(".awesomplete li", { timeout: 15000 }).contains(Cypress.env("item")).click();
+      .type(Cypress.env("item"), { delay: 80 });
+    cy.get(".awesomplete li:visible", { timeout: 20000 }).contains(Cypress.env("item")).click();
 
     cy.get("body").type("{ctrl}s");
     cy.get(".title-area .title-text", { timeout: 30000 })
       .invoke("text")
       .should("not.match", /New Sales Invoice/i);
+    cy.screenshot("v15-sales-invoice-created");
   });
 });

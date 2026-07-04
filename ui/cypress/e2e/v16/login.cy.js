@@ -6,5 +6,6 @@ describe("v16 · Login", () => {
     cy.get("#login_password").type(Cypress.env("admin_password"), { log: false });
     cy.get(".btn-login").click();
     cy.location("pathname", { timeout: 30000 }).should("include", "/app");
+    cy.screenshot("v16-login-desk");
   });
 });

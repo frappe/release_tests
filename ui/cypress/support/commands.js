@@ -15,7 +15,12 @@ Cypress.Commands.add("apiLogin", (usr, pwd) => {
 });
 
 // Fill a Frappe Link field by fieldname and pick the matching awesomplete option.
+// Click to focus/open the control, then type slowly so Frappe's debounced
+// search_link fires, and pick from THIS field's own (visible) dropdown so we
+// never match a stale/empty awesomplete list belonging to another field.
 Cypress.Commands.add("fillLink", (fieldname, value) => {
-  cy.get(`[data-fieldname="${fieldname}"] input:visible`).first().clear().type(value);
-  cy.get(".awesomplete li", { timeout: 15000 }).contains(value).click();
+  cy.get(`[data-fieldname="${fieldname}"] input:visible`).first().click().clear().type(value, { delay: 80 });
+  cy.get(`[data-fieldname="${fieldname}"] .awesomplete li:visible`, { timeout: 20000 })
+    .contains(value)
+    .click();
 });

@@ -15,8 +15,8 @@ describe("v16 · Sales Invoice", () => {
     cy.get('[data-fieldname="items"] .grid-body [data-fieldname="item_code"] input:visible')
       .first()
       .click()
-      .type(Cypress.env("item"));
-    cy.get(".awesomplete li", { timeout: 15000 }).contains(Cypress.env("item")).click();
+      .type(Cypress.env("item"), { delay: 80 });
+    cy.get(".awesomplete li:visible", { timeout: 20000 }).contains(Cypress.env("item")).click();
 
     // Save (Ctrl/Cmd+S) and confirm it left the "New" state (got a name).
     cy.get("body").type("{ctrl}s");
@@ -24,5 +24,6 @@ describe("v16 · Sales Invoice", () => {
       .invoke("text")
       .should("match", /ACC-SINV|SINV|Sales Invoice/i)
       .and("not.match", /New Sales Invoice/i);
+    cy.screenshot("v16-sales-invoice-created");
   });
 });
