@@ -12,22 +12,22 @@ from typing import Any
 from .client import FrappeClient
 
 # Deterministic names so re-runs are idempotent and easy to spot/clean up.
-SMOKE_COMPANY = "Smoke Test Co"
-SMOKE_COMPANY_ABBR = "STC"
-SMOKE_CUSTOMER = "Smoke Test Customer"
-SMOKE_ITEM = "SMOKE-ITEM"
-SMOKE_STOCK_ITEM = "SMOKE-STOCK-ITEM"
-SMOKE_SERIAL_ITEM = "SMOKE-SERIAL-ITEM"
-SMOKE_BATCH_ITEM = "SMOKE-BATCH-ITEM"
-SMOKE_SERVICE_ITEM = "SMOKE-SERVICE-ITEM"
-SMOKE_FG_ITEM = "SMOKE-FG-ITEM"
-SMOKE_RAW_ITEM = "SMOKE-RAW-ITEM"
-SMOKE_WAREHOUSE = "Smoke Warehouse"
-SMOKE_SUPPLIER = "Smoke Test Supplier"
-SMOKE_EMPLOYEE = "Smoke Test Employee"
-SMOKE_EMPLOYEE_2 = "Smoke Report Employee"
-SMOKE_LEAVE_TYPE = "Smoke Leave Type"
-SMOKE_EXPENSE_TYPE = "Smoke Expense Type"
+RT_COMPANY = "Release Test Co"
+RT_COMPANY_ABBR = "RTC"
+RT_CUSTOMER = "Release Test Customer"
+RT_ITEM = "RT-ITEM"
+RT_STOCK_ITEM = "RT-STOCK-ITEM"
+RT_SERIAL_ITEM = "RT-SERIAL-ITEM"
+RT_BATCH_ITEM = "RT-BATCH-ITEM"
+RT_SERVICE_ITEM = "RT-SERVICE-ITEM"
+RT_FG_ITEM = "RT-FG-ITEM"
+RT_RAW_ITEM = "RT-RAW-ITEM"
+RT_WAREHOUSE = "Release Warehouse"
+RT_SUPPLIER = "Release Test Supplier"
+RT_EMPLOYEE = "Release Test Employee"
+RT_EMPLOYEE_2 = "Release Report Employee"
+RT_LEAVE_TYPE = "Release Leave Type"
+RT_EXPENSE_TYPE = "Release Expense Type"
 
 
 def _get_or_create(client: FrappeClient, doctype: str, name: str, doc: dict[str, Any]) -> str:
@@ -66,10 +66,10 @@ def ensure_company(client: FrappeClient) -> str:
     return _get_or_create(
         client,
         "Company",
-        SMOKE_COMPANY,
+        RT_COMPANY,
         {
-            "company_name": SMOKE_COMPANY,
-            "abbr": SMOKE_COMPANY_ABBR,
+            "company_name": RT_COMPANY,
+            "abbr": RT_COMPANY_ABBR,
             "default_currency": "INR",
             "country": "India",
         },
@@ -80,15 +80,15 @@ def ensure_customer(client: FrappeClient) -> str:
     return _get_or_create(
         client,
         "Customer",
-        SMOKE_CUSTOMER,
-        {"customer_name": SMOKE_CUSTOMER, "customer_type": "Company"},
+        RT_CUSTOMER,
+        {"customer_name": RT_CUSTOMER, "customer_type": "Company"},
     )
 
 
 def ensure_item(client: FrappeClient) -> str:
     doc = {
-        "item_code": SMOKE_ITEM,
-        "item_name": "Smoke Test Item",
+        "item_code": RT_ITEM,
+        "item_name": "Release Test Item",
         "is_stock_item": 0,
         "stock_uom": "Nos",
         "item_group": "All Item Groups",
@@ -96,16 +96,16 @@ def ensure_item(client: FrappeClient) -> str:
     hsn = _hsn_code(client)
     if hsn:
         doc["gst_hsn_code"] = hsn
-    return _get_or_create(client, "Item", SMOKE_ITEM, doc)
+    return _get_or_create(client, "Item", RT_ITEM, doc)
 
 
 def ensure_employee(client: FrappeClient, company: str) -> str:
-    return _ensure_employee(client, company, SMOKE_EMPLOYEE)
+    return _ensure_employee(client, company, RT_EMPLOYEE)
 
 
 def ensure_employee2(client: FrappeClient, company: str, reports_to: str) -> str:
     """A second Employee that reports to ``reports_to`` (the manager)."""
-    return _ensure_employee(client, company, SMOKE_EMPLOYEE_2, reports_to)
+    return _ensure_employee(client, company, RT_EMPLOYEE_2, reports_to)
 
 
 def _ensure_employee(
@@ -143,23 +143,23 @@ def _ensure_employee(
 def ensure_warehouse(client: FrappeClient, company: str) -> str:
     # ERPNext suffixes warehouse names with the company abbreviation.
     abbr = client.get_list("Company", filters={"name": company}, fields=["abbr"], limit=1)[0]["abbr"]
-    name = f"{SMOKE_WAREHOUSE} - {abbr}"
+    name = f"{RT_WAREHOUSE} - {abbr}"
     existing = client.get_list("Warehouse", filters={"name": name}, fields=["name"], limit=1)
     if existing:
         return existing[0]["name"]
     return client.insert(
-        {"doctype": "Warehouse", "warehouse_name": SMOKE_WAREHOUSE, "company": company}
+        {"doctype": "Warehouse", "warehouse_name": RT_WAREHOUSE, "company": company}
     )["name"]
 
 
 def ensure_stock_item(client: FrappeClient, company: str, warehouse: str) -> str:
-    existing = client.get_list("Item", filters={"name": SMOKE_STOCK_ITEM}, fields=["name"], limit=1)
+    existing = client.get_list("Item", filters={"name": RT_STOCK_ITEM}, fields=["name"], limit=1)
     if existing:
         return existing[0]["name"]
     doc = {
         "doctype": "Item",
-        "item_code": SMOKE_STOCK_ITEM,
-        "item_name": "Smoke Stock Item",
+        "item_code": RT_STOCK_ITEM,
+        "item_name": "Release Stock Item",
         "is_stock_item": 1,
         "stock_uom": "Nos",
         "item_group": "All Item Groups",
@@ -175,8 +175,8 @@ def ensure_supplier(client: FrappeClient) -> str:
     return _get_or_create(
         client,
         "Supplier",
-        SMOKE_SUPPLIER,
-        {"supplier_name": SMOKE_SUPPLIER, "supplier_group": "All Supplier Groups"},
+        RT_SUPPLIER,
+        {"supplier_name": RT_SUPPLIER, "supplier_group": "All Supplier Groups"},
     )
 
 
@@ -206,8 +206,8 @@ def ensure_leave_type(client: FrappeClient) -> str:
     return _get_or_create(
         client,
         "Leave Type",
-        SMOKE_LEAVE_TYPE,
-        {"leave_type_name": SMOKE_LEAVE_TYPE, "max_leaves_allowed": 20},
+        RT_LEAVE_TYPE,
+        {"leave_type_name": RT_LEAVE_TYPE, "max_leaves_allowed": 20},
     )
 
 
@@ -221,7 +221,7 @@ def ensure_holiday_list(client: FrappeClient, employee: str) -> str:
     from datetime import date
 
     year = date.today().year
-    name = f"Smoke Holiday List {year}"
+    name = f"Release Holiday List {year}"
     existing = client.get_list("Holiday List", filters={"name": name}, fields=["name"], limit=1)
     holiday_list = (
         existing[0]["name"]
@@ -310,12 +310,12 @@ def _new_item(client: FrappeClient, code: str, name: str, extra: dict[str, Any])
 def ensure_serialised_item(client: FrappeClient, company: str, warehouse: str) -> str:
     return _new_item(
         client,
-        SMOKE_SERIAL_ITEM,
-        "Smoke Serial Item",
+        RT_SERIAL_ITEM,
+        "Release Serial Item",
         {
             "is_stock_item": 1,
             "has_serial_no": 1,
-            "serial_no_series": "SMK-SER-.#####",
+            "serial_no_series": "RT-SER-.#####",
             "item_defaults": [{"company": company, "default_warehouse": warehouse}],
         },
     )
@@ -324,20 +324,20 @@ def ensure_serialised_item(client: FrappeClient, company: str, warehouse: str) -
 def ensure_batched_item(client: FrappeClient, company: str, warehouse: str) -> str:
     return _new_item(
         client,
-        SMOKE_BATCH_ITEM,
-        "Smoke Batch Item",
+        RT_BATCH_ITEM,
+        "Release Batch Item",
         {
             "is_stock_item": 1,
             "has_batch_no": 1,
             "create_new_batch": 1,
-            "batch_number_series": "SMK-BATCH-.#####",
+            "batch_number_series": "RT-BATCH-.#####",
             "item_defaults": [{"company": company, "default_warehouse": warehouse}],
         },
     )
 
 
 def ensure_service_item(client: FrappeClient) -> str:
-    return _new_item(client, SMOKE_SERVICE_ITEM, "Smoke Service Item", {"is_stock_item": 0})
+    return _new_item(client, RT_SERVICE_ITEM, "Release Service Item", {"is_stock_item": 0})
 
 
 def ensure_serial_batch_enabled(client: FrappeClient) -> None:
@@ -367,8 +367,8 @@ def ensure_named_warehouse(client: FrappeClient, company: str, base_name: str) -
 def ensure_fg_item(client: FrappeClient, company: str, warehouse: str) -> str:
     return _new_item(
         client,
-        SMOKE_FG_ITEM,
-        "Smoke Finished Good",
+        RT_FG_ITEM,
+        "Release Finished Good",
         {"is_stock_item": 1, "item_defaults": [{"company": company, "default_warehouse": warehouse}]},
     )
 
@@ -376,17 +376,17 @@ def ensure_fg_item(client: FrappeClient, company: str, warehouse: str) -> str:
 def ensure_raw_item(client: FrappeClient, company: str, warehouse: str) -> str:
     return _new_item(
         client,
-        SMOKE_RAW_ITEM,
-        "Smoke Raw Material",
+        RT_RAW_ITEM,
+        "Release Raw Material",
         {"is_stock_item": 1, "item_defaults": [{"company": company, "default_warehouse": warehouse}]},
     )
 
 
 def ensure_manufacturing_warehouses(client: FrappeClient, company: str) -> dict[str, str]:
     return {
-        "source": ensure_named_warehouse(client, company, "Smoke Source WH"),
-        "wip": ensure_named_warehouse(client, company, "Smoke WIP WH"),
-        "fg": ensure_named_warehouse(client, company, "Smoke FG WH"),
+        "source": ensure_named_warehouse(client, company, "Release Source WH"),
+        "wip": ensure_named_warehouse(client, company, "Release WIP WH"),
+        "fg": ensure_named_warehouse(client, company, "Release FG WH"),
     }
 
 
@@ -422,6 +422,6 @@ def ensure_expense_claim_type(client: FrappeClient) -> str:
     return _get_or_create(
         client,
         "Expense Claim Type",
-        SMOKE_EXPENSE_TYPE,
-        {"expense_type": SMOKE_EXPENSE_TYPE},
+        RT_EXPENSE_TYPE,
+        {"expense_type": RT_EXPENSE_TYPE},
     )

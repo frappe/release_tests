@@ -39,6 +39,24 @@ Release Manager (`run.js` sets `video: true`).
 There is no local v15 site on this one-app-version bench, so the **v15 specs are
 structure-only** until you point `CYPRESS_BASE_URL` at a real v15 site.
 
+## macOS: bench must run in a GUI Terminal
+Cypress is an Electron app. On **macOS** it can only launch inside a GUI (Aqua)
+session — even in headless mode there is no `xvfb`. So when you trigger UI tests
+from Release Manager, the bench (and its RQ worker) **must be started from
+`bench start` in Terminal.app**, not a headless/SSH context. Headed shows the
+browser window; headless just skips the window (still needs the session) and
+records a video. A launch from a non-GUI context fails with
+`Could not find Cypress test run results` — Release Manager surfaces this with a
+hint in the run's Output/log.
+
+## CI / unattended (Linux, no desktop)
+`.github/workflows/ui-tests.yml` runs the specs on `ubuntu-latest` via the
+official `cypress-io/github-action` (virtual display handled for you) — the only
+truly display-less path, for staging / Frappe Cloud sites. Configure repo
+**Variables** `BASE_URL`, `ADMIN_USER`, `CUSTOMER`, `ITEM` and the **Secret**
+`ADMIN_PASSWORD`, then run the workflow (choose `v16`/`v15`). Screenshots + videos
+are uploaded as artifacts.
+
 ## Notes / roadmap
 - The invoice spec reuses **existing** master data (customer + item) — set them via
   `CYPRESS_CUSTOMER` / `CYPRESS_ITEM`; they must already exist on the target site.

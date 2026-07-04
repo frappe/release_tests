@@ -17,7 +17,7 @@ module.exports = defineConfig({
     admin_user: process.env.CYPRESS_ADMIN_USER || "Administrator",
     admin_password: process.env.CYPRESS_ADMIN_PASSWORD || "SmokeTest@123",
     // Existing master data the invoice test reuses (must already exist on the site).
-    customer: process.env.CYPRESS_CUSTOMER || "Smoke Test Customer",
-    item: process.env.CYPRESS_ITEM || "SMOKE-ITEM",
+    customer: process.env.CYPRESS_CUSTOMER || "Release Test Customer",
+    item: process.env.CYPRESS_ITEM || "RT-STOCK-ITEM",
   },
 });

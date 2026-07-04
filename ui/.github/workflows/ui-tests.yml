@@ -1,0 +1,58 @@
+# Unattended UI (Cypress) tests for a Frappe/ERPNext site.
+# Runs on a Linux runner where the official Cypress action provides a virtual
+# display — no desktop needed (unlike macOS). Trigger manually and point it at
+# any reachable site (local tunnel, staging, or Frappe Cloud).
+name: UI tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Spec set to run"
+        type: choice
+        options: [v16, v15]
+        default: v16
+      base_url:
+        description: "Target site base URL (defaults to repo var BASE_URL)"
+        required: false
+      customer:
+        description: "Existing customer to reuse"
+        required: false
+      item:
+        description: "Existing item to reuse"
+        required: false
+
+jobs:
+  cypress:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    env:
+      CYPRESS_BASE_URL: ${{ inputs.base_url || vars.BASE_URL }}
+      CYPRESS_ADMIN_USER: ${{ vars.ADMIN_USER || 'Administrator' }}
+      CYPRESS_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      CYPRESS_CUSTOMER: ${{ inputs.customer || vars.CUSTOMER }}
+      CYPRESS_ITEM: ${{ inputs.item || vars.ITEM }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Cypress (${{ inputs.version }})
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ui
+          spec: cypress/e2e/${{ inputs.version }}/**/*.cy.js
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-${{ inputs.version }}
+          path: |
+            ui/cypress/screenshots
+            ui/cypress/videos
+          if-no-files-found: ignore
