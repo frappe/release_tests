@@ -12,11 +12,10 @@ describe("v15 · Sales Invoice", () => {
     cy.fillLink("customer", Cypress.env("customer"));
 
     cy.get('[data-fieldname="items"] .grid-add-row', { timeout: 20000 }).click();
-    const itemInput = '[data-fieldname="items"] .grid-body [data-fieldname="item_code"] input:visible';
-    cy.get(itemInput).first().scrollIntoView().click();
-    cy.wait(300);
-    cy.get(itemInput).first().clear().type(Cypress.env("item"), { delay: 100 });
-    cy.get(".awesomplete li", { timeout: 20000 }).contains(Cypress.env("item")).click({ force: true });
+    cy.selectLink(
+      '[data-fieldname="items"] .grid-body [data-fieldname="item_code"] input:visible',
+      Cypress.env("item")
+    );
 
     cy.get("body").type("{ctrl}s");
     cy.get(".title-area .title-text", { timeout: 30000 })

@@ -14,13 +14,21 @@ Cypress.Commands.add("apiLogin", (usr, pwd) => {
   });
 });
 
-// Fill a Frappe Link field by fieldname and pick the matching awesomplete option.
+// Select a value in a Frappe Link input (works for form + grid inputs).
+// Keyboard selection: type -> wait for the search to return -> ArrowDown+Enter on
+// the focused input. This keeps focus on the field so the awesomplete can't close
+// from a page scroll, and never depends on finding/clicking the floating <li>.
+Cypress.Commands.add("selectLink", (selector, value) => {
+  cy.intercept("GET", "**/frappe.desk.search.search_link*").as("searchLink");
+  cy.get(selector).first().scrollIntoView().click();
+  cy.wait(200); // let the control open before typing, else the first keystrokes get dropped
+  cy.get(selector).first().clear().type(value, { delay: 60 });
+  cy.wait("@searchLink"); // the results are back
+  cy.wait(400); // awesomplete renders them
+  cy.focused().type("{downarrow}{enter}");
+});
+
+// Convenience for a top-level form Link field, by fieldname.
 Cypress.Commands.add("fillLink", (fieldname, value) => {
-  const input = `[data-fieldname="${fieldname}"] input:visible`;
-  cy.get(input).first().scrollIntoView().click();
-  cy.wait(300); // let the control open before typing, else the first keystrokes get dropped
-  cy.get(input).first().clear().type(value, { delay: 100 });
-  // Match by text + force-click. Do NOT filter by :visible — Cypress mis-flags
-  // awesomplete's absolutely-positioned <ul> as hidden, so :visible matches nothing.
-  cy.get(".awesomplete li", { timeout: 20000 }).contains(value).click({ force: true });
+  cy.selectLink(`[data-fieldname="${fieldname}"] input:visible`, value);
 });
