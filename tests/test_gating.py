@@ -1,4 +1,4 @@
-from frappe_smoke import gating
+from release_tests import gating
 
 V = {
     "frappe": {"version": "16.0.0", "branch": "version-16"},

@@ -1,6 +1,6 @@
-# frappe_smoke
+# release_tests
 
-External HTTP smoke-test harness for Frappe sites. Given a running site, it logs
+External HTTP release-test harness for Frappe sites. Given a running site, it logs
 in over the REST API and exercises a defined set of flows per **installed app**,
 adapting to whatever **version** is present (develop / v16 / v15), then reports
 pass/fail per app and step.
@@ -13,7 +13,7 @@ remote / press-deployed site tomorrow with no change.
 
 Frappe ships many app releases monthly, and regressions — including cross-app
 breakage (e.g. CRM or India-compliance changes breaking ERPNext) — are often
-catchable by simple smoke flows: log in, create master data, push one
+catchable by simple release flows: log in, create master data, push one
 transaction through. This tool automates exactly that across versions.
 
 ## Install
@@ -28,7 +28,7 @@ Copy the example and fill in credentials (the real file is gitignored):
 
 ```bash
 cp targets.example.toml targets.toml
-export SMOKE_ADMIN_PW='...'             # values like "$SMOKE_ADMIN_PW" resolve from env
+export RELEASE_ADMIN_PW='...'             # values like "$RELEASE_ADMIN_PW" resolve from env
 ```
 
 Each `[[target]]` is one site: a URL plus either `login` (username/password) or
@@ -38,10 +38,10 @@ local multi-tenant bench sites route correctly.
 ## Use
 
 ```bash
-frappe-smoke list-suites                       # registered suites
-frappe-smoke detect  --target v16-local        # installed apps + versions
-frappe-smoke run     --target v16-local        # run all applicable suites
-frappe-smoke run     --target all --suite erpnext
+release-tests list-suites                       # registered suites
+release-tests detect  --target v16-local        # installed apps + versions
+release-tests run     --target v16-local        # run all applicable suites
+release-tests run     --target all --suite erpnext
 ```
 
 `run` prints a per-target table, writes a JSON report to `results/`, and exits
@@ -59,9 +59,9 @@ non-zero if any step failed (CI-friendly). Suites whose app isn't installed are
 
 ### Adding / extending a suite
 
-Subclass `SmokeSuite`, set `name` + `required_app`, and return ordered `Step`s
+Subclass `ReleaseSuite`, set `name` + `required_app`, and return ordered `Step`s
 from `build_steps`. Steps share a `context` dict so later steps reuse earlier
-records. Use the idempotent helpers in `frappe_smoke/factories.py`. For
+records. Use the idempotent helpers in `release_tests/factories.py`. For
 version-specific behavior, branch with `gating.at_least(versions, app, "16")`.
 
 ## Testing the harness

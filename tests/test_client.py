@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import responses
 
-from frappe_smoke.client import FrappeAPIError, FrappeClient
+from release_tests.client import FrappeAPIError, FrappeClient
 
 BASE = "http://site.localhost:8000"
 

@@ -1,8 +1,8 @@
 [project]
-name = "frappe_smoke"
-description = "External HTTP smoke-test harness for Frappe sites — logs in over REST and exercises per-app flows across multiple versions (develop / v16 / v15)."
+name = "release_tests"
+description = "External HTTP release-test harness for Frappe sites — logs in over REST and exercises per-app flows across multiple versions (develop / v16 / v15)."
 authors = [
-    { name = "Frappe Smoke Contributors", email = "umair_sayyed@yahoo.com" },
+    { name = "Release Tests Contributors", email = "umair_sayyed@yahoo.com" },
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -21,17 +21,17 @@ dev = [
 ]
 
 [project.scripts]
-frappe-smoke = "frappe_smoke.cli:main"
+release-tests = "release_tests.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "frappe_smoke/__init__.py"
+path = "release_tests/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["frappe_smoke"]
+packages = ["release_tests"]
 
 [tool.ruff]
 line-length = 100

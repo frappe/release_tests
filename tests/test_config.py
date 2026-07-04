@@ -1,6 +1,6 @@
 import pytest
 
-from frappe_smoke.config import Target, load_targets, select_targets
+from release_tests.config import Target, load_targets, select_targets
 
 
 def test_target_validation():

@@ -1,9 +1,9 @@
-from frappe_smoke.gating import Versions
-from frappe_smoke.runner import run_suite, run_target
-from frappe_smoke.suites.base import SmokeSuite, Step
+from release_tests.gating import Versions
+from release_tests.runner import run_suite, run_target
+from release_tests.suites.base import ReleaseSuite, Step
 
 
-class _PassThenFail(SmokeSuite):
+class _PassThenFail(ReleaseSuite):
     name = "demo"
     required_app = None
 
@@ -30,7 +30,7 @@ def test_continue_on_fail_runs_all(fake_client):
 
 
 def test_suite_skips_when_app_absent(fake_client):
-    class Needs(SmokeSuite):
+    class Needs(ReleaseSuite):
         name = "needs"
         required_app = "erpnext"
 
