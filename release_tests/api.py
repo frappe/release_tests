@@ -75,3 +75,37 @@ def run_site(
     data = dataclasses.asdict(result)
     data["transactions"] = client.submitted_count
     return data
+
+
+def iter_run_site(
+    site_config: dict[str, Any],
+    suites: Iterable[str] | None = None,
+    *,
+    continue_on_fail: bool = False,
+):
+    """Run selected suites, yielding an event as each suite finishes.
+
+    Events (plain dicts): ``{"type":"versions",...}`` first, then one
+    ``{"type":"suite","suite":{...}}`` per suite as it completes, then
+    ``{"type":"done","transactions":N}``. On connect/detect failure a single
+    ``{"type":"error","error":...}`` is yielded. Lets a caller persist each
+    suite result live for a real-time UI, instead of only after the whole run.
+    """
+    from .runner import run_suite
+
+    target = _target_from_config(site_config)
+    try:
+        client = connect(target)
+        versions = client.get_versions()
+    except Exception as exc:  # noqa: BLE001
+        yield {"type": "error", "error": str(exc)}
+        return
+
+    yield {"type": "versions", "versions": versions}
+    wanted = set(suites) if suites else None
+    for suite in all_suites():
+        if wanted is not None and suite.name not in wanted:
+            continue
+        result = run_suite(client, suite, versions, continue_on_fail=continue_on_fail)
+        yield {"type": "suite", "suite": dataclasses.asdict(result)}
+    yield {"type": "done", "transactions": client.submitted_count, "versions": versions}
