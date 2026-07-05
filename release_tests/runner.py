@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from .client import FrappeClient
 from .gating import Versions, version_of
 from .suites import all_suites
-from .suites.base import ReleaseSuite, StepResult, SuiteResult
+from .suites.base import ReleaseSuite, SkipStep, StepResult, SuiteResult
 
 
 @dataclass
@@ -66,6 +66,10 @@ def run_suite(
             step.fn(client, context)
             elapsed = int((time.perf_counter() - started) * 1000)
             result.steps.append(StepResult(suite.name, step.name, "pass", elapsed))
+        except SkipStep as exc:
+            # Best-effort step whose precondition isn't met — record + keep going.
+            elapsed = int((time.perf_counter() - started) * 1000)
+            result.steps.append(StepResult(suite.name, step.name, "skip", elapsed, error=str(exc)))
         except Exception as exc:  # noqa: BLE001 - we want any failure recorded, not raised
             elapsed = int((time.perf_counter() - started) * 1000)
             result.steps.append(StepResult(suite.name, step.name, "fail", elapsed, error=str(exc)))

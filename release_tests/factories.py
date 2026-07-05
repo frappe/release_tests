@@ -425,3 +425,151 @@ def ensure_expense_claim_type(client: FrappeClient) -> str:
         RT_EXPENSE_TYPE,
         {"expense_type": RT_EXPENSE_TYPE},
     )
+
+
+# ------------------------------------------------------- India Compliance (GST)
+# IC's own test GSTINs (pass its validation). Company + customer in different
+# states so the invoice is inter-state -> IGST.
+RT_COMPANY_GSTIN = "24AAQCA8719H1ZC"  # Gujarat (state 24)
+RT_CUSTOMER_GSTIN = "27AAQCA8719H1Z6"  # Maharashtra (27)
+RT_GST_CUSTOMER = "Release GST Customer"
+RT_GST_ITEMS = [
+    ("RT-GST-5", "Release GST Item 5%", 5),
+    ("RT-GST-12", "Release GST Item 12%", 12),
+    ("RT-GST-18", "Release GST Item 18%", 18),
+]
+
+
+def ensure_gst_company(client: FrappeClient) -> str:
+    """Ensure the site company carries a (test) GSTIN + Registered Regular category."""
+    company = ensure_company(client)
+    row = client.get_list("Company", filters={"name": company}, fields=["gstin"], limit=1)[0]
+    if not row.get("gstin"):
+        client.call(
+            "frappe.client.set_value",
+            doctype="Company",
+            name=company,
+            fieldname={"gstin": RT_COMPANY_GSTIN, "gst_category": "Registered Regular"},
+        )
+    return company
+
+
+def output_igst_account(client: FrappeClient, company: str) -> str | None:
+    """The company's Output IGST account, from GST Settings (IC auto-creates it)."""
+    settings = client.get_doc("GST Settings", "GST Settings")
+    for r in settings.get("gst_accounts", []):
+        if r.get("account_type") == "Output" and r.get("company") == company:
+            return r.get("igst_account")
+    return None
+
+
+def ensure_company_gst_address(client: FrappeClient, company: str) -> str:
+    """A company Address carrying the GSTIN — IC needs it to stamp company_gstin."""
+    existing = client.get_list("Address", filters={"gstin": RT_COMPANY_GSTIN}, fields=["name"], limit=1)
+    if existing:
+        return existing[0]["name"]
+    doc = {
+        "doctype": "Address",
+        "address_title": "Release Test Co GST",
+        "address_type": "Billing",
+        "address_line1": "1 Test Road",
+        "city": "Ahmedabad",
+        "state": "Gujarat",
+        "country": "India",
+        "pincode": "380001",
+        "gstin": RT_COMPANY_GSTIN,
+        "gst_category": "Registered Regular",
+        "is_your_company_address": 1,
+        "links": [{"link_doctype": "Company", "link_name": company}],
+    }
+    return client.insert(doc)["name"]
+
+
+def ensure_gst_customer(client: FrappeClient) -> str:
+    name = _get_or_create(
+        client,
+        "Customer",
+        RT_GST_CUSTOMER,
+        {"customer_name": RT_GST_CUSTOMER, "customer_type": "Company"},
+    )
+    row = client.get_list("Customer", filters={"name": name}, fields=["gstin"], limit=1)[0]
+    if not row.get("gstin"):
+        client.call(
+            "frappe.client.set_value",
+            doctype="Customer",
+            name=name,
+            fieldname={"gstin": RT_CUSTOMER_GSTIN, "gst_category": "Registered Regular"},
+        )
+    return name
+
+
+def ensure_item_tax_template(client: FrappeClient, company: str, rate: int) -> str:
+    """Item Tax Template at a GST rate — IC fills the tax rows from ``gst_rate``."""
+    existing = client.get_list(
+        "Item Tax Template", filters={"company": company, "gst_rate": rate}, fields=["name"], limit=1
+    )
+    if existing:
+        return existing[0]["name"]
+    doc = {
+        "doctype": "Item Tax Template",
+        "title": f"Release GST {rate}%",
+        "company": company,
+        "gst_treatment": "Taxable",
+        "gst_rate": rate,
+    }
+    return client.insert(doc)["name"]
+
+
+def ensure_gst_item(client: FrappeClient, company: str, code: str, name: str, rate: int) -> str:
+    existing = client.get_list("Item", filters={"name": code}, fields=["name"], limit=1)
+    if existing:
+        return existing[0]["name"]
+    doc = {
+        "doctype": "Item",
+        "item_code": code,
+        "item_name": name,
+        "item_group": "All Item Groups",
+        "stock_uom": "Nos",
+        "is_stock_item": 0,
+        "taxes": [{"item_tax_template": ensure_item_tax_template(client, company, rate)}],
+    }
+    hsn = _hsn_code(client)
+    if hsn:
+        doc["gst_hsn_code"] = hsn
+    return client.insert(doc)["name"]
+
+
+# ------------------------------------------------------------------ Frappe CRM
+RT_CRM_LEAD_EMAIL = "release.lead@example.com"
+RT_CRM_LEAD_NAME = "Release"
+
+
+def ensure_crm_lead(client: FrappeClient) -> str:
+    existing = client.get_list("CRM Lead", filters={"email": RT_CRM_LEAD_EMAIL}, fields=["name"], limit=1)
+    if existing:
+        return existing[0]["name"]
+    doc = {
+        "doctype": "CRM Lead",
+        "first_name": RT_CRM_LEAD_NAME,
+        "last_name": "Test Lead",
+        "email": RT_CRM_LEAD_EMAIL,
+        "status": "New",
+    }
+    return client.insert(doc)["name"]
+
+
+def ensure_crm_organization(client: FrappeClient, name: str) -> str:
+    existing = client.get_list(
+        "CRM Organization", filters={"organization_name": name}, fields=["name"], limit=1
+    )
+    if existing:
+        return existing[0]["name"]
+    return client.insert({"doctype": "CRM Organization", "organization_name": name})["name"]
+
+
+def ensure_crm_deal(client: FrappeClient, organization: str) -> str:
+    org = ensure_crm_organization(client, organization)
+    existing = client.get_list("CRM Deal", filters={"organization": org}, fields=["name"], limit=1)
+    if existing:
+        return existing[0]["name"]
+    return client.insert({"doctype": "CRM Deal", "organization": org, "status": "Qualification"})["name"]

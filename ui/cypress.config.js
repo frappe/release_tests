@@ -22,5 +22,11 @@ module.exports = defineConfig({
     // Existing master data the invoice test reuses (must already exist on the site).
     customer: process.env.CYPRESS_CUSTOMER || "Release Test Customer",
     item: process.env.CYPRESS_ITEM || "RT-STOCK-ITEM",
+    // India Compliance (GST) invoice test — masters created by the API suite.
+    gst_customer: process.env.CYPRESS_GST_CUSTOMER || "Release GST Customer",
+    gst_item: process.env.CYPRESS_GST_ITEM || "RT-GST-18",
+    // Frappe CRM lead test.
+    crm_lead_first: process.env.CYPRESS_CRM_LEAD_FIRST || "Release",
+    crm_lead_email: process.env.CYPRESS_CRM_LEAD_EMAIL || "release.ui.lead@example.com",
   },
 });

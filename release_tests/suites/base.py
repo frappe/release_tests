@@ -19,6 +19,15 @@ from ..gating import Versions
 StepFn = Callable[[FrappeClient, dict], None]
 
 
+class SkipStep(Exception):
+    """Raised by a step to record itself as skipped rather than failed.
+
+    For best-effort steps whose precondition isn't met on a given site (e.g. the
+    e-invoice step when the India Compliance API isn't configured). A skip does
+    not block the suite — later steps still run.
+    """
+
+
 @dataclass
 class Step:
     name: str
