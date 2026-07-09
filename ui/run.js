@@ -1,4 +1,4 @@
-// Programmatic Cypress runner used by Release Manager (smoke_console.api.run_ui_test).
+// Programmatic Cypress runner used by Release Manager (release_manager.api.run_ui_test).
 // Runs one version's spec folder and writes a structured results JSON that the
 // Frappe side parses into Test Result records. Configured entirely via env vars.
 //

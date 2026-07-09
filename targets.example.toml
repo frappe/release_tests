@@ -2,7 +2,7 @@
 # Each [[target]] is one site the harness can run against.
 #
 # Values starting with "$" are resolved from environment variables, e.g.
-#   password = "$SMOKE_ADMIN_PW"   ->   reads $SMOKE_ADMIN_PW at load time.
+#   password = "$RELEASE_ADMIN_PW"   ->   reads $RELEASE_ADMIN_PW at load time.
 
 # --- Local bench, ERPNext v16 (username/password login) ---
 [[target]]
@@ -10,7 +10,7 @@ label = "v16-local"
 url = "http://mysite.localhost:8000"
 auth = "login"
 username = "Administrator"
-password = "$SMOKE_ADMIN_PW"
+password = "$RELEASE_ADMIN_PW"
 # host_header is inferred from the URL host; override only if needed.
 
 # --- Local bench, ERPNext v15 site (multi-tenant by Host header) ---
@@ -19,7 +19,7 @@ label = "v15-local"
 url = "http://erpnextv15:8000"
 auth = "login"
 username = "Administrator"
-password = "$SMOKE_ADMIN_PW"
+password = "$RELEASE_ADMIN_PW"
 host_header = "erpnextv15"
 
 # --- Example: remote / press-deployed site using API token auth ---

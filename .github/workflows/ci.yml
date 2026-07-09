@@ -17,7 +17,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Lint
-        run: uvx ruff check frappe_smoke tests
+        run: uvx ruff check release_tests tests
 
       - name: Run harness tests (mocked, no live site)
         run: uv run --extra dev pytest -q
