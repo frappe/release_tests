@@ -53,9 +53,20 @@ non-zero if any step failed (CI-friendly). Suites whose app isn't installed are
 | Suite | App | Status |
 |-------|-----|--------|
 | `core_frappe` | frappe | login, whoami, ToDo CRUD round-trip |
-| `erpnext` | erpnext | masters → submit Sales Invoice → Payment Entry → settled |
-| `hrms` | hrms | create Employee, Leave Type fixtures present |
-| `crm`, `helpdesk`, `learning`, `insights`, `builder`, `webshop`, `india_compliance`, `ksa_compliance` | respective | **stub** — gated reachability probe; fill in real flows |
+| `erpnext` (+ `erpnext_*`) | erpnext | masters → submit Sales Invoice → Payment Entry → settled; selling/buying/stock/accounts/service/serialised/batched/manufacturing |
+| `hrms` (+ `hrms_*`) | hrms | Employee, org, leave, expense flows |
+| `crm` | crm | create Lead → Deal → Customer |
+| `india_compliance` | india_compliance | GST masters → GST Sales Invoice → best-effort e-invoice |
+| `insights` | insights (+erpnext) | Workbook → query on Sales Invoice → charts → dashboard |
+| `helpdesk` | helpdesk | create Agent → open Ticket |
+| `webshop` | webshop | publish Website Item → top-bar link → item page loads |
+| `builder` | builder | author page (hero + cards) → publish → page loads |
+| `learning`, `ksa_compliance` | respective | **stub** — gated reachability probe; fill in real flows |
+
+> `helpdesk`, `webshop`, and `builder` are written against each app's schema but
+> not yet validated end-to-end here (those apps weren't installable in the dev
+> bench). Every suite auto-skips when its app is absent, so they're exercised on
+> the first target that has the app.
 
 ### Adding / extending a suite
 

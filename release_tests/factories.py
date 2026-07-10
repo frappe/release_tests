@@ -7,9 +7,14 @@ never piles up duplicate master data.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from .client import FrappeClient
+
+
+def _json(value: Any) -> str:
+    return json.dumps(value, default=str)
 
 # Deterministic names so re-runs are idempotent and easy to spot/clean up.
 RT_COMPANY = "Release Test Co"
@@ -573,3 +578,226 @@ def ensure_crm_deal(client: FrappeClient, organization: str) -> str:
     if existing:
         return existing[0]["name"]
     return client.insert({"doctype": "CRM Deal", "organization": org, "status": "Qualification"})["name"]
+
+
+# ------------------------------------------------------------------ Insights
+# Insights v3 stores everything under a Workbook: Queries carry their logic as an
+# ``operations`` list (the query-builder format), Charts link a Query, and a
+# Dashboard lays out Charts via its ``items`` JSON. Names autogenerate, so all
+# get-or-create helpers key on ``title`` (scoped to the workbook where relevant).
+RT_INSIGHTS_WORKBOOK = "Release Insights Workbook"
+RT_INSIGHTS_QUERY = "Release Sales Invoice Query"
+RT_INSIGHTS_DASHBOARD = "Release Sales Invoice Dashboard"
+
+
+def _insights_by_title(
+    client: FrappeClient, doctype: str, title: str, workbook: str | None = None
+) -> str | None:
+    filters: dict[str, Any] = {"title": title}
+    if workbook:
+        filters["workbook"] = workbook
+    existing = client.get_list(doctype, filters=filters, fields=["name"], limit=1)
+    return existing[0]["name"] if existing else None
+
+
+def ensure_insights_workbook(client: FrappeClient) -> str:
+    name = _insights_by_title(client, "Insights Workbook", RT_INSIGHTS_WORKBOOK)
+    if name:
+        return name
+    return client.insert({"doctype": "Insights Workbook", "title": RT_INSIGHTS_WORKBOOK})["name"]
+
+
+def ensure_insights_query(client: FrappeClient, workbook: str, table_name: str) -> str:
+    """A builder query whose source is a Site-DB table (e.g. ``tabSales Invoice``)."""
+    name = _insights_by_title(client, "Insights Query v3", RT_INSIGHTS_QUERY, workbook)
+    if name:
+        return name
+    doc = {
+        "doctype": "Insights Query v3",
+        "title": RT_INSIGHTS_QUERY,
+        "workbook": workbook,
+        "use_live_connection": 1,
+        "is_builder_query": 1,
+        "operations": [
+            {"type": "source", "table": {"type": "table", "data_source": "Site DB", "table_name": table_name}}
+        ],
+    }
+    return client.insert(doc)["name"]
+
+
+def ensure_insights_chart(
+    client: FrappeClient, workbook: str, query: str, title: str, chart_type: str
+) -> str:
+    name = _insights_by_title(client, "Insights Chart v3", title, workbook)
+    if name:
+        return name
+    doc = {
+        "doctype": "Insights Chart v3",
+        "title": title,
+        "workbook": workbook,
+        "query": query,
+        "chart_type": chart_type,
+        "config": {},
+    }
+    return client.insert(doc)["name"]
+
+
+def ensure_insights_dashboard(client: FrappeClient, workbook: str, charts: list[str]) -> str:
+    name = _insights_by_title(client, "Insights Dashboard v3", RT_INSIGHTS_DASHBOARD, workbook)
+    if name:
+        return name
+    items = [{"id": f"chart-{i + 1}", "type": "chart", "chart": c} for i, c in enumerate(charts)]
+    doc = {
+        "doctype": "Insights Dashboard v3",
+        "title": RT_INSIGHTS_DASHBOARD,
+        "workbook": workbook,
+        "items": items,
+    }
+    return client.insert(doc)["name"]
+
+
+# ------------------------------------------------------------------ Helpdesk
+RT_HD_AGENT_EMAIL = "release.agent@example.com"
+RT_HD_AGENT_NAME = "Release Agent"
+RT_HD_TICKET_SUBJECT = "Release smoke ticket"
+
+
+def ensure_hd_agent(client: FrappeClient) -> str:
+    """Get-or-create an HD Agent (and the backing User). Keyed on the user email."""
+    existing = client.get_list("HD Agent", filters={"user": RT_HD_AGENT_EMAIL}, fields=["name"], limit=1)
+    if existing:
+        return existing[0]["name"]
+    if not client.get_list("User", filters={"email": RT_HD_AGENT_EMAIL}, fields=["name"], limit=1):
+        client.insert(
+            {
+                "doctype": "User",
+                "email": RT_HD_AGENT_EMAIL,
+                "first_name": RT_HD_AGENT_NAME,
+                "send_welcome_email": 0,
+                "roles": [{"role": "Agent"}],
+            }
+        )
+    return client.insert(
+        {"doctype": "HD Agent", "user": RT_HD_AGENT_EMAIL, "agent_name": RT_HD_AGENT_NAME, "is_active": 1}
+    )["name"]
+
+
+def ensure_hd_ticket(client: FrappeClient, raised_by: str) -> str:
+    """Get-or-create an HD Ticket (keyed on subject so re-runs don't pile up)."""
+    existing = client.get_list(
+        "HD Ticket", filters={"subject": RT_HD_TICKET_SUBJECT}, fields=["name"], limit=1
+    )
+    if existing:
+        return existing[0]["name"]
+    doc = {
+        "doctype": "HD Ticket",
+        "subject": RT_HD_TICKET_SUBJECT,
+        "description": "Opened by the release_tests smoke run.",
+        "raised_by": raised_by,
+        "priority": "Low",
+        "status": "Open",
+    }
+    return client.insert(doc)["name"]
+
+
+# ------------------------------------------------------------------ Webshop
+RT_WEBSHOP_ITEM = "RT-WEB-ITEM"
+RT_WEBSHOP_ITEM_NAME = "Release Web Item"
+RT_TOP_BAR_LABEL = "Release Shop"
+
+
+def ensure_webshop_item(client: FrappeClient) -> str:
+    """A stock Item that a Website Item can be published from."""
+    return _new_item(client, RT_WEBSHOP_ITEM, RT_WEBSHOP_ITEM_NAME, {"is_stock_item": 0})
+
+
+def ensure_website_item(client: FrappeClient, item_code: str) -> dict[str, Any]:
+    """Get-or-create a *published* Website Item for ``item_code``. Returns name + route."""
+    existing = client.get_list(
+        "Website Item", filters={"item_code": item_code}, fields=["name", "route", "published"], limit=1
+    )
+    if existing:
+        return existing[0]
+    doc = {
+        "doctype": "Website Item",
+        "item_code": item_code,
+        "web_item_name": RT_WEBSHOP_ITEM_NAME,
+        "item_group": "All Item Groups",
+        "published": 1,
+    }
+    created = client.insert(doc)
+    return {"name": created["name"], "route": created.get("route"), "published": created.get("published")}
+
+
+def ensure_top_bar_item(client: FrappeClient, label: str, url: str) -> None:
+    """Add a Top Bar Item to Website Settings (a Single) if the label isn't already there."""
+    settings = client.get_doc("Website Settings", "Website Settings")
+    rows = settings.get("top_bar_items") or []
+    if any(r.get("label") == label for r in rows):
+        return
+    rows.append({"doctype": "Top Bar Item", "label": label, "url": url})
+    settings["top_bar_items"] = rows
+    client.call("frappe.client.save", doc=_json(settings))
+
+
+# ------------------------------------------------------------------ Builder
+RT_BUILDER_ROUTE = "release-test-page"
+RT_BUILDER_TITLE = "Release Test Page"
+
+
+def _builder_text(tag: str, text: str) -> dict[str, Any]:
+    return {"element": tag, "attributes": {}, "classes": [], "baseStyles": {}, "children": [], "innerHTML": text}
+
+
+def _builder_card(title: str, body: str) -> dict[str, Any]:
+    return {
+        "element": "div",
+        "attributes": {},
+        "classes": [],
+        "baseStyles": {"padding": "20px", "border": "1px solid #eee", "borderRadius": "8px"},
+        "children": [_builder_text("h3", title), _builder_text("p", body)],
+    }
+
+
+def _builder_blocks() -> list[dict[str, Any]]:
+    """A minimal page: a hero section + a row of three cards."""
+    hero = {
+        "element": "section",
+        "attributes": {},
+        "classes": [],
+        "baseStyles": {"padding": "60px", "textAlign": "center"},
+        "children": [
+            _builder_text("h1", "Release Test Page"),
+            _builder_text("p", "Published by the release_tests smoke run."),
+        ],
+    }
+    cards = {
+        "element": "div",
+        "attributes": {},
+        "classes": [],
+        "baseStyles": {"display": "flex", "gap": "20px", "padding": "40px"},
+        "children": [
+            _builder_card("Fast", "Reliable release checks."),
+            _builder_card("Simple", "One flow per app."),
+            _builder_card("Repeatable", "Idempotent by design."),
+        ],
+    }
+    return [hero, cards]
+
+
+def ensure_builder_page(client: FrappeClient) -> dict[str, Any]:
+    """Get-or-create a *published* Builder Page (hero + cards). Returns name + route."""
+    existing = client.get_list(
+        "Builder Page", filters={"route": RT_BUILDER_ROUTE}, fields=["name", "route", "published"], limit=1
+    )
+    if existing:
+        return existing[0]
+    doc = {
+        "doctype": "Builder Page",
+        "page_title": RT_BUILDER_TITLE,
+        "route": RT_BUILDER_ROUTE,
+        "blocks": _json(_builder_blocks()),
+        "published": 1,
+    }
+    created = client.insert(doc)
+    return {"name": created["name"], "route": created.get("route"), "published": created.get("published")}
