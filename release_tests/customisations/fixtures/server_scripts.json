@@ -1,0 +1,18 @@
+[
+  {
+    "name": "RT SI Before Save",
+    "script_type": "DocType Event",
+    "reference_doctype": "Sales Invoice",
+    "doctype_event": "Before Save",
+    "disabled": 0,
+    "script": "# Stamp the custom field so the suite can prove a DocType Event script still fires.\nif not doc.rt_release_ref:\n\tdoc.rt_release_ref = \"RT-\" + (doc.customer or \"NA\")\n"
+  },
+  {
+    "name": "RT Filter Probe",
+    "script_type": "API",
+    "api_method": "rt_filter_probe",
+    "allow_guest": 0,
+    "disabled": 0,
+    "script": "# Expose the *in-Python* filter path to the HTTP-only engine.\n#\n# frappe.utils.evaluate_filters / compare are the code that changed when\n# `between` was added to operator_map in frappe/utils/data.py. Before that\n# change these returned False for every `between` filter; after it they\n# actually evaluate. There is no stock endpoint that reaches them, so the\n# frappe_filters suite calls this probe and compares the answer with what the\n# DB-side path (frappe.client.get_list) returns for the same bounds.\n#\n# No imports: safe_exec blocks __import__ and already provides `json`.\nargs = frappe.form_dict\nprobe_doc = json.loads(args.get(\"probe_doc\") or \"{}\")\nprobe_filters = json.loads(args.get(\"probe_filters\") or \"[]\")\nprobe_filters = [tuple(f) if isinstance(f, list) else f for f in probe_filters]\n\nfrappe.response[\"message\"] = {\n\t\"evaluate_filters\": bool(frappe.utils.evaluate_filters(probe_doc, probe_filters)),\n}\n"
+  }
+]

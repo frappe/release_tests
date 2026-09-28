@@ -1,0 +1,25 @@
+[
+  {
+    "dt": "Sales Invoice",
+    "fieldname": "rt_release_ref",
+    "label": "RT Release Ref",
+    "fieldtype": "Data",
+    "insert_after": "po_no",
+    "description": "Stamped by the RT SI Before Save server script; asserted by the customisations suite."
+  },
+  {
+    "dt": "Item",
+    "fieldname": "rt_risk_score",
+    "label": "RT Risk Score",
+    "fieldtype": "Int",
+    "insert_after": "item_group"
+  },
+  {
+    "dt": "Employee",
+    "fieldname": "rt_badge",
+    "label": "RT Badge",
+    "fieldtype": "Select",
+    "options": "\nGold\nSilver\nBronze",
+    "insert_after": "employee_name"
+  }
+]
