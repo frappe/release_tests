@@ -9,6 +9,26 @@ It is a **standalone client** — *not* a Frappe app installed on the site. It o
 speaks HTTP, so the same harness runs against a local bench site today and a
 remote / press-deployed site tomorrow with no change.
 
+## Deploying to Frappe Cloud
+
+**Do not add this repo through "Add app from GitHub".** It is a Python library, not
+a Frappe app: there is no `hooks.py` and nothing to install onto a site, so Frappe
+Cloud rejects it with *"Not a valid Frappe App! Files hooks.py or patches.txt does
+not exist"*. That error is correct — the repo is being used the wrong way.
+
+It reaches a bench as an ordinary pip dependency of
+[`release_manager`](https://github.com/frappe/release_manager), which declares it as
+
+```toml
+dependencies = [
+    "release_tests @ git+https://github.com/frappe/release_tests.git@main",
+]
+```
+
+So on Frappe Cloud you add **only `release_manager`**; this engine is pulled in with
+it. Because that reference tracks `main`, whatever is on `main` at build time is what
+gets deployed — push here before rebuilding the bench.
+
 ## Why
 
 Frappe ships many app releases monthly, and regressions — including cross-app
