@@ -16,6 +16,7 @@ def all_suites() -> list[ReleaseSuite]:
         builder,
         core_frappe,
         crm,
+        customisations,
         erpnext,
         erpnext_accounts,
         erpnext_batched,
@@ -25,6 +26,9 @@ def all_suites() -> list[ReleaseSuite]:
         erpnext_serialised,
         erpnext_service,
         erpnext_stock,
+        frappe_filters,
+        frappe_jinja_sandbox,
+        frappe_permissions,
         helpdesk,
         hrms,
         hrms_expense,
@@ -39,6 +43,9 @@ def all_suites() -> list[ReleaseSuite]:
 
     return [
         core_frappe.CoreFrappeSuite(),
+        frappe_filters.FrappeFiltersSuite(),
+        frappe_jinja_sandbox.FrappeJinjaSandboxSuite(),
+        frappe_permissions.FrappePermissionsSuite(),
         erpnext.ERPNextSuite(),
         erpnext_selling.ERPNextSellingSuite(),
         erpnext_buying.ERPNextBuyingSuite(),
@@ -60,6 +67,7 @@ def all_suites() -> list[ReleaseSuite]:
         webshop.WebshopSuite(),
         india_compliance.IndiaComplianceSuite(),
         ksa_compliance.KSAComplianceSuite(),
+        customisations.CustomisationsSuite(),
     ]
 
 

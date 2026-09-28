@@ -801,3 +801,47 @@ def ensure_builder_page(client: FrappeClient) -> dict[str, Any]:
     }
     created = client.insert(doc)
     return {"name": created["name"], "route": created.get("route"), "published": created.get("published")}
+
+
+# ----------------------------------------------------------- limited-role user
+RT_LIMITED_USER = "release.limited@example.com"
+RT_LIMITED_PASSWORD = "ReleaseLimited#2026"
+# Deliberately ordinary roles. Never System Manager — that bypasses the very
+# checks these regressions were about.
+RT_LIMITED_ROLES = ("Sales User",)
+
+
+def ensure_limited_user(client: FrappeClient) -> str:
+    """Get-or-create a non-System-Manager user with a known password.
+
+    The permission-hardening regressions upstream all look identical from an
+    Administrator session — Administrator bypasses the checks that broke. Proving
+    those flows still work needs a genuinely restricted login, so this user carries
+    ordinary roles only and never System Manager.
+    """
+    existing = client.get_list(
+        "User", filters={"name": RT_LIMITED_USER}, fields=["name"], limit=1
+    )
+    if not existing:
+        client.insert(
+            {
+                "doctype": "User",
+                "email": RT_LIMITED_USER,
+                "first_name": "Release",
+                "last_name": "Limited",
+                "send_welcome_email": 0,
+                "new_password": RT_LIMITED_PASSWORD,
+                "roles": [{"role": role} for role in RT_LIMITED_ROLES],
+            }
+        )
+        return RT_LIMITED_USER
+
+    # Re-assert the password so a run never depends on what a previous run left.
+    client.call(
+        "frappe.client.set_value",
+        doctype="User",
+        name=RT_LIMITED_USER,
+        fieldname="new_password",
+        value=RT_LIMITED_PASSWORD,
+    )
+    return RT_LIMITED_USER
