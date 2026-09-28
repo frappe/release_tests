@@ -16,14 +16,28 @@ describe("v16 · CRM Lead", () => {
     // Fill the lead's first name + email in the modal.
     cy.get('[role="dialog"], .modal', { timeout: 15000 }).should("be.visible");
     cy.get('[role="dialog"], .modal').within(() => {
-      cy.get('input[placeholder*="First" i], input[placeholder*="Name" i]')
+      // Cypress's selector engine (Sizzle) doesn't support the CSS4 `i`
+      // case-insensitive attribute flag (`[placeholder*="First" i]`) — it's a hard
+      // syntax error, not just a non-match. A .filter() predicate does the
+      // case-insensitive check in JS instead, sidestepping the engine limitation.
+      cy.get("input")
+        .filter((_, el) => /first|name/i.test(el.placeholder || ""))
         .first()
         .clear()
         .type(Cypress.env("crm_lead_first"));
-      cy.get('input[type="email"], input[placeholder*="mail" i]')
+      cy.get("input")
+        .filter((_, el) => el.type === "email" || /mail/i.test(el.placeholder || ""))
         .first()
         .clear()
         .type(Cypress.env("crm_lead_email"));
+      // KNOWN LIMITATION, not fixed here: this modal's Status field is mandatory
+      // with no default, so submitting without setting it throws "Status is
+      // required". Selecting it isn't a plain text match: a document-wide
+      // cy.contains() for the option text also matches the Leads list's own
+      // background Status *filter* dropdown (present in the DOM behind the
+      // modal), so the popover needs to be scoped precisely — e.g. via the
+      // trigger's aria-controls, or the popover's own role/data attribute —
+      // before this can select the modal's own field reliably.
       cy.contains("button", /create|save/i).click();
     });
 

@@ -13,11 +13,7 @@ describe("v16 · GST Sales Invoice", () => {
 
     cy.fillLink("customer", Cypress.env("gst_customer"));
 
-    cy.get('[data-fieldname="items"] .grid-add-row', { timeout: 20000 }).click();
-    cy.selectLink(
-      '[data-fieldname="items"] .grid-body [data-fieldname="item_code"] input:visible',
-      Cypress.env("gst_item")
-    );
+    cy.fillGridLink("items", 1, "item_code", Cypress.env("gst_item"));
 
     // Save (draft) — GST taxes compute on save from the item's tax template.
     cy.get("body").type("{ctrl}s");
