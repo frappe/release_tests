@@ -10,7 +10,7 @@ isolated test functions.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Callable, ClassVar
 
 from ..client import FrappeClient
 from ..gating import Versions
@@ -44,6 +44,10 @@ class ReleaseSuite:
     name: str = ""
     required_app: str | None = None
     description: str = ""
+    # Upstream changes this suite guards, as "app@commit" or "app#pr" strings.
+    # Regression suites cite what broke so a reviewer can see why the suite exists;
+    # flow suites leave it empty.
+    guards: ClassVar[list[str]] = []
 
     def applies(self, versions: Versions) -> bool:
         """Whether this suite should run against a site with these app versions.

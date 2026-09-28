@@ -32,6 +32,7 @@ def catalog() -> list[dict[str, Any]]:
                 "required_app": suite.required_app,
                 "description": getattr(suite, "description", "") or "",
                 "steps": steps,
+                "guards": list(getattr(suite, "guards", []) or []),
             }
         )
     return entries
