@@ -20,8 +20,30 @@ from ..gating import Versions
 from .base import ReleaseSuite, SkipStep, Step
 
 
+def _needs_pack(step_fn):
+    """Skip a step when provisioning was refused, rather than let it fail on missing state.
+
+    A SkipStep does not block the rest of the suite, so without this every later
+    step would raise KeyError on context the provisioning step never set — turning
+    one honest skip into six misleading failures.
+    """
+
+    def wrapped(client: FrappeClient, ctx: dict) -> None:
+        if ctx.get("not_permitted"):
+            raise SkipStep(ctx["not_permitted"])
+        step_fn(client, ctx)
+
+    wrapped.__name__ = step_fn.__name__
+    wrapped.__doc__ = step_fn.__doc__
+    return wrapped
+
+
 def _provision(client: FrappeClient, ctx: dict) -> None:
-    ctx["pack"] = customisations.ensure_customisations(client)
+    try:
+        ctx["pack"] = customisations.ensure_customisations(client)
+    except customisations.CustomisationsNotPermitted as exc:
+        ctx["not_permitted"] = str(exc)
+        raise SkipStep(str(exc)) from exc
     ctx["company"] = factories.ensure_company(client)
     ctx["customer"] = factories.ensure_customer(client)
     ctx["item"] = factories.ensure_item(client)
@@ -156,10 +178,16 @@ class CustomisationsSuite(ReleaseSuite):
     def build_steps(self, versions: Versions) -> list[Step]:
         return [
             Step("provision customisation pack", _provision),
-            Step("custom field present in meta", _custom_field_in_meta),
-            Step("property setter applied", _property_setter_applied),
-            Step("custom field round-trips through submit", _custom_field_round_trips),
-            Step("server script fires on save", _server_script_fires),
-            Step("custom doctype accepts child rows", _custom_doctype_accepts_child_rows),
-            Step("client script intact", _client_script_present),
+            Step("custom field present in meta", _needs_pack(_custom_field_in_meta)),
+            Step("property setter applied", _needs_pack(_property_setter_applied)),
+            Step(
+                "custom field round-trips through submit",
+                _needs_pack(_custom_field_round_trips),
+            ),
+            Step("server script fires on save", _needs_pack(_server_script_fires)),
+            Step(
+                "custom doctype accepts child rows",
+                _needs_pack(_custom_doctype_accepts_child_rows),
+            ),
+            Step("client script intact", _needs_pack(_client_script_present)),
         ]

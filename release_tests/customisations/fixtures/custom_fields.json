@@ -4,8 +4,8 @@
     "fieldname": "rt_release_ref",
     "label": "RT Release Ref",
     "fieldtype": "Data",
-    "insert_after": "po_no",
-    "description": "Stamped by the RT SI Before Save server script; asserted by the customisations suite."
+    "insert_after": "due_date",
+    "description": "Stamped by the RT SI Before Save server script and the RT client script; asserted by the customisations suite. Anchored to due_date so it sits on the main tab -- po_no lives in a collapsed section on the More Info tab, where a browser test can never see it."
   },
   {
     "dt": "Item",

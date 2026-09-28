@@ -39,8 +39,13 @@ describe("v16 · customisation layer", () => {
 
     // Its custom button writes the custom field.
     cy.contains(".btn, .dropdown-item", "RT Release Check", { timeout: 20000 }).click();
-    cy.get('[data-fieldname="rt_release_ref"] input:visible')
-      .invoke("val")
+
+    // Assert against the form's model, not a visible input. Whether the field is
+    // on screen depends on which tab and section it was anchored into, and that is
+    // a property of the fixture, not of the client script under test. Reading
+    // cur_frm.doc proves the script ran regardless of where the field was placed.
+    cy.window()
+      .its("cur_frm.doc.rt_release_ref", { timeout: 20000 })
       .should("match", /^RT-CLIENT-/);
 
     cy.screenshot("v16-customisations-client-script");

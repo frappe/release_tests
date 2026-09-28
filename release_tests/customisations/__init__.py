@@ -32,6 +32,10 @@ RT_NOTE_DOCTYPE = "RT Release Note"
 RT_NOTE_CHILD_DOCTYPE = "RT Release Note Item"
 
 
+class CustomisationsNotPermitted(RuntimeError):
+    """Target is not opted in to being customised."""
+
+
 class ServerScriptsDisabled(RuntimeError):
     """Target site has ``server_script_enabled`` off, so scripts cannot be pushed."""
 
@@ -71,13 +75,33 @@ def _sync_script(client: FrappeClient, doctype: str, definition: dict[str, Any])
 
 
 # ------------------------------------------------------------------ each layer
+_CUSTOM_FIELD_SYNCED = ("insert_after", "label", "options", "description")
+
+
 def ensure_custom_fields(client: FrappeClient) -> list[str]:
-    """Custom Fields autoname to ``{dt}-{fieldname}``, which is our idempotency key."""
+    """Custom Fields autoname to ``{dt}-{fieldname}``, which is our idempotency key.
+
+    Placement is re-synced rather than left alone: a field anchored to the wrong
+    host field ends up somewhere a browser test cannot see it, and plain
+    get-or-create would keep an earlier revision's position forever.
+    """
     created = []
     for field in _fixture("custom_fields.json"):
         name = f"{field['dt']}-{field['fieldname']}"
         if not _exists(client, "Custom Field", name):
             client.insert({"doctype": "Custom Field", **field})
+            created.append(name)
+            continue
+        current = client.get_doc("Custom Field", name)
+        for key in _CUSTOM_FIELD_SYNCED:
+            if key in field and current.get(key) != field[key]:
+                client.call(
+                    "frappe.client.set_value",
+                    doctype="Custom Field",
+                    name=name,
+                    fieldname=key,
+                    value=field[key],
+                )
         created.append(name)
     return created
 
@@ -153,9 +177,20 @@ def ensure_custom_doctypes(client: FrappeClient) -> list[str]:
 def ensure_customisations(client: FrappeClient) -> dict[str, Any]:
     """Provision the whole pack. Returns what exists, plus any layer that skipped.
 
+    Refuses unless the target opted in via ``allow_customisations``. Unlike every
+    other suite, this one *writes schema* — custom fields, scripts and DocTypes —
+    so "run all suites" against an ordinary site would silently customise it. The
+    opt-in makes that a deliberate choice per site rather than a side effect.
+
     Only the Server Script layer is optional; everything else is expected to work
     on any site the engine can authenticate against.
     """
+    if not getattr(client, "allow_customisations", False):
+        raise CustomisationsNotPermitted(
+            "This suite writes custom fields, scripts and DocTypes to the target, so "
+            "the site must opt in. Tick 'Allow Customisations' on the Testing Site "
+            "(or set allow_customisations = true for the target in targets.toml)."
+        )
     result: dict[str, Any] = {
         "custom_fields": ensure_custom_fields(client),
         "property_setters": ensure_property_setters(client),

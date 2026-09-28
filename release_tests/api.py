@@ -48,6 +48,7 @@ def _target_from_config(site_config: dict[str, Any]) -> Target:
         api_key=site_config.get("api_key"),
         api_secret=site_config.get("api_secret"),
         host_header=site_config.get("host_header"),
+        allow_customisations=bool(site_config.get("allow_customisations")),
     )
 
 

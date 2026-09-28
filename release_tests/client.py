@@ -52,6 +52,9 @@ class FrappeClient:
             self.session.headers["Host"] = host
         self.session.headers["Accept"] = "application/json"
         self.logged_in_user: str | None = None
+        # Set by config.connect() from the Target. Default False so a client built
+        # directly (tests, ad-hoc scripts) can never provision customisations.
+        self.allow_customisations = False
         # Counts submitted documents — a proxy for "transactions created" in a run.
         self.submitted_count = 0
 

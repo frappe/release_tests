@@ -27,6 +27,10 @@ class Target:
     api_key: str | None = None
     api_secret: str | None = None
     host_header: str | None = None
+    # Opt-in, because the customisations suite *writes* schema to the target:
+    # custom fields, scripts and DocTypes. Off by default so running "all suites"
+    # against an ordinary site can never customise it by accident.
+    allow_customisations: bool = False
 
     def __post_init__(self) -> None:
         if self.auth not in ("login", "token"):
@@ -89,4 +93,7 @@ def connect(target: Target):
         client.use_token(target.api_key, target.api_secret)  # type: ignore[arg-type]
     else:
         client.login(target.username, target.password)  # type: ignore[arg-type]
+    # Carried on the client because a suite's steps receive the client, not the
+    # Target; this is how the customisations suite sees its opt-in.
+    client.allow_customisations = target.allow_customisations
     return client
