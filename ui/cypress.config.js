@@ -20,11 +20,6 @@ module.exports = defineConfig({
     // fixed elements, so the click/type lands on the wrong thing. "center" keeps
     // every auto-scrolled target clear of fixed chrome on all four specs.
     scrollBehavior: "center",
-    // Targets are real remote sites (e.g. *.m.frappe.cloud), not localhost — a
-    // search_link round trip can easily exceed Cypress's 5s default requestTimeout,
-    // which fails cy.wait("@alias") with "no request ever occurred" even though the
-    // request lands a moment later. Give it real network-round-trip headroom.
-    requestTimeout: 20000,
   },
   env: {
     admin_user: process.env.CYPRESS_ADMIN_USER || "Administrator",

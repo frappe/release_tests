@@ -10,9 +10,12 @@ describe("v16 · Login", () => {
     // Frappe lands somewhere authenticated after login — /app or /desk depending
     // on version, but a site with Helpdesk (or another) configured as the default
     // workspace can redirect elsewhere again (e.g. /helpdesk/home). Asserting we
-    // left /login is what actually proves login worked, without hardcoding every
-    // possible destination a site's default-workspace setting could send us to.
+    // left /login is necessary but not sufficient: a failed login could just as
+    // well redirect to some other public, unauthenticated page. Frappe sets the
+    // `user_id` cookie to the logged-in user (and to "Guest" otherwise), so check
+    // that too — that's what actually proves the session is authenticated.
     cy.location("pathname", { timeout: 30000 }).should("not.match", /^\/login/);
+    cy.getCookie("user_id").its("value").should("not.eq", "Guest");
     cy.screenshot("v16-login-desk");
   });
 });

@@ -41,7 +41,10 @@ Cypress.Commands.add("apiLogin", (usr, pwd) => {
 //    after the keystrokes were sent. Now that we assert the exact suggestion is
 //    on-screen *before* acting on it, clicking it directly is the unambiguous,
 //    deterministic way to select it — no dependence on keyboard-driven awesomplete
-//    state or focus timing.
+//    state or focus timing. The click is a plain, unforced click: if fixed chrome
+//    (or anything else) still covers the suggestion despite the centering above,
+//    Cypress's own actionability check should fail loudly rather than click
+//    through it silently.
 Cypress.Commands.add("selectLink", (selector, value) => {
   cy.get(selector).first().scrollIntoView({ block: "center", inline: "center" }).should("be.visible").click();
   cy.wait(200); // let the control open before typing, else the first keystrokes get dropped
@@ -53,7 +56,7 @@ Cypress.Commands.add("selectLink", (selector, value) => {
     .contains(value, { matchCase: false, timeout: 20000 })
     .scrollIntoView({ block: "center" })
     .should("be.visible")
-    .click({ force: true });
+    .click();
 });
 
 // Convenience for a top-level form Link field, by fieldname.
