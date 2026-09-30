@@ -8,6 +8,7 @@ against a local bench site or a remote press-deployed site.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -155,6 +156,47 @@ class FrappeClient:
         self._raise_for_status(resp)
         body = resp.json()
         return body.get("message", body)
+
+    def call_raw(self, method: str, **kwargs: Any) -> requests.Response:
+        """POST to a method and return the raw response — for endpoints that answer
+        with a file (CSV export, PDF) rather than JSON. Raises on non-2xx."""
+        resp = self.session.post(
+            f"{self.url}/api/method/{method}",
+            data=kwargs or None,
+            timeout=self.timeout,
+        )
+        self._raise_for_status(resp)
+        return resp
+
+    def upload(self, data: dict[str, Any], filename: str, content: bytes) -> requests.Response:
+        """Multipart POST to ``upload_file``, as the desk's file uploader sends it."""
+        resp = self.session.post(
+            f"{self.url}/api/method/upload_file",
+            data=data,
+            files={"file": (filename, content)},
+            timeout=self.timeout,
+        )
+        self._raise_for_status(resp)
+        return resp
+
+    def get_page(self, path: str, *, allow_redirects: bool = True) -> requests.Response:
+        """GET a website/desk page as this session. Never raises: the status and any
+        redirect are what page-level checks assert on.
+
+        Opening the desk issues the session a CSRF token, after which Frappe refuses
+        every write that doesn't carry it ("HTTP 400: Invalid Request"). A browser
+        sends it on every request; so does this client from then on.
+        """
+        resp = self.session.get(
+            f"{self.url}/{path.lstrip('/')}",
+            headers={"Accept": "text/html"},
+            allow_redirects=allow_redirects,
+            timeout=self.timeout,
+        )
+        match = re.search(r'frappe\.csrf_token\s*=\s*"([^"]+)"', resp.text or "")
+        if match and match.group(1) and "{{" not in match.group(1):
+            self.session.headers["X-Frappe-CSRF-Token"] = match.group(1)
+        return resp
 
     # --------------------------------------------------------------- helpers
     def _raise_for_status(self, resp: requests.Response) -> None:
