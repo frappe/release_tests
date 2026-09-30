@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import fnmatch
 import time
 from dataclasses import dataclass, field
 
-from .client import FrappeClient
+from .client import FrappeAPIError, FrappeClient
 from .gating import Versions, version_of
 from .suites import all_suites
-from .suites.base import ReleaseSuite, SkipStep, StepResult, SuiteResult
+from .suites.base import CheckFailed, ReleaseSuite, SkipStep, StepResult, SuiteResult
 
 
 @dataclass
@@ -51,6 +52,21 @@ def run_suite(
 
     if not suite.applies(versions):
         result.status = "skip"
+        result.skip_reason = "app not installed or version not supported"
+        return result
+
+    try:
+        reason = suite.precheck(client)
+    except Exception as exc:  # noqa: BLE001 - a broken probe is a failure, not a skip
+        reason = None
+        result.status = "fail"
+        result.steps.append(
+            StepResult(suite.name, "precheck", "fail", 0, error=str(exc), details=_details(exc))
+        )
+        return result
+    if reason:
+        result.status = "skip"
+        result.skip_reason = reason
         return result
 
     context: dict = {}
@@ -72,14 +88,76 @@ def run_suite(
             result.steps.append(StepResult(suite.name, step.name, "skip", elapsed, error=str(exc)))
         except Exception as exc:  # noqa: BLE001 - we want any failure recorded, not raised
             elapsed = int((time.perf_counter() - started) * 1000)
-            result.steps.append(StepResult(suite.name, step.name, "fail", elapsed, error=str(exc)))
+            result.steps.append(
+                StepResult(
+                    suite.name, step.name, "fail", elapsed, error=str(exc), details=_details(exc)
+                )
+            )
             result.status = "fail"
-            if not continue_on_fail:
+            if step.blocks_on_fail or not (continue_on_fail or suite.independent_steps):
                 blocked = True
 
     if result.status != "fail" and all(s.status == "skip" for s in result.steps):
         result.status = "skip"
     return result
+
+
+# What a failure means, for the run summary. The suites exist to catch problems end
+# users would hit, so a failure is only a *finding* when the product misbehaved; one
+# caused by the harness itself is a gap in coverage, not a result.
+ISSUE = "issue"  # the product misbehaved (wrong permission/result, or a server error)
+TRIAGE = "needs triage"  # the server rejected a step unexpectedly: regression or test data?
+HARNESS = "harness"  # the test itself broke (code error, lost session) — no verdict reached
+
+
+def _details(exc: Exception) -> dict:
+    from .checks import server_said
+
+    """Structured failure context for the report.
+
+    A :class:`CheckFailed` carries its own; an unexpected API error still has an
+    HTTP status and a server message worth surfacing separately from the traceback
+    text, so the reader sees *what the server said* without parsing the error line.
+    """
+    if isinstance(exc, CheckFailed):
+        hint = exc.details.get("hint") or ""
+        harness = "session was lost" in hint or "CSRF" in hint
+        return {**exc.details, "kind": HARNESS if harness else ISSUE}
+    if isinstance(exc, FrappeAPIError):
+        if exc.status == 400 and "invalid request" in f"{exc} {exc.server_messages}".lower():
+            return {
+                "check": "the test's request was refused as a CSRF failure",
+                "actual": server_said(exc),
+                "kind": HARNESS,
+                "hint": "CSRF token missing on the test's request — fix the test",
+            }
+        server_error = bool(exc.status and exc.status >= 500)
+        return {
+            "check": "unexpected server error while running the step",
+            "actual": server_said(exc),
+            "kind": ISSUE if server_error else TRIAGE,
+            "hint": "a user doing this would hit the same server error"
+            if server_error
+            else "the server refused a step the test expected to work — a regression, "
+            "or test data this site doesn't accept",
+        }
+    return {
+        "check": "the test itself raised an error",
+        "actual": f"{type(exc).__name__}: {exc}",
+        "kind": HARNESS,
+        "hint": "fix the test; this area was not actually checked",
+    }
+
+
+def suite_selected(name: str, only_suite: str | None) -> bool:
+    """Whether ``name`` matches ``--suite``: a name, a glob (``v16p_*``) or a comma list."""
+    if not only_suite:
+        return True
+    return any(
+        fnmatch.fnmatchcase(name, pattern.strip())
+        for pattern in only_suite.split(",")
+        if pattern.strip()
+    )
 
 
 def run_target(
@@ -105,7 +183,7 @@ def run_target(
     target_result.versions = versions
 
     for suite in all_suites():
-        if only_suite and suite.name != only_suite:
+        if not suite_selected(suite.name, only_suite):
             continue
         if suite_filter is not None and suite.name not in suite_filter:
             continue

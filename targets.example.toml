@@ -29,3 +29,13 @@ host_header = "erpnextv15"
 # auth = "token"
 # api_key = "$STAGING_API_KEY"
 # api_secret = "$STAGING_API_SECRET"
+
+# --- version-16-polished site for the v16p_* suites ---
+# allow_customisations creates the "RT Perm Probe" test DocType the permission checks use.
+# [[target]]
+# label = "v16p"
+# url = "https://polished.example.com"
+# auth = "login"
+# username = "Administrator"
+# password = "$V16P_ADMIN_PW"
+# allow_customisations = true

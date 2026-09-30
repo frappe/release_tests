@@ -60,6 +60,9 @@ def _cmd_run(args: argparse.Namespace) -> int:
     if not args.no_json:
         path = write_json(results, args.results_dir)
         print(f"\nJSON report: {path}")
+        failures = path.with_name(path.stem + "-failures.md")
+        if failures.exists():
+            print(f"Failures:    {failures}")
     return 0 if overall_ok(results) else 1
 
 
@@ -81,7 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_run = sub.add_parser("run", help="run release suites against target(s)")
     add_target_args(p_run)
-    p_run.add_argument("--suite", default=None, help="run only this suite (default: all)")
+    p_run.add_argument("--suite", default=None, help="suite name, glob (e.g. 'v16p_*') or comma list (default: all)")
     p_run.add_argument(
         "--continue-on-fail",
         action="store_true",

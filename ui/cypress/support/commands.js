@@ -114,3 +114,77 @@ Cypress.Commands.add("fillGridLink", (gridFieldname, rowIdx, cellFieldname, valu
 Cypress.Commands.add("waitForItemRate", () => {
   cy.wait("@gridLinkFetch", { timeout: 20000 });
 });
+
+// ---------------------------------------------------------------- personas
+// Test users created by the API suites (release_tests/personas.py). Browser specs
+// act as them through Frappe's own Impersonate, so no password ever reaches the
+// browser: log in as the admin, impersonate, and the session is now that user's —
+// same permissions, plus a red "You are impersonating" banner.
+Cypress.env("personas", {
+  sales: "rt.sales@example.com",
+  sales_mgr: "rt.salesmgr@example.com",
+  accounts: "rt.accounts@example.com",
+  reader: "rt.reader@example.com",
+  exporter: "rt.exporter@example.com",
+});
+
+Cypress.Commands.add("asAdmin", () => {
+  cy.clearCookies();
+  cy.apiLogin();
+  cy.visit("/desk/todo");
+});
+
+// Fail with a clear reason when the API suites haven't created the persona yet.
+Cypress.Commands.add("requirePersona", (key) => {
+  const user = Cypress.env("personas")[key];
+  cy.request({ url: `/api/resource/User/${encodeURIComponent(user)}`, failOnStatusCode: false })
+    .its("status")
+    .should((status) => {
+      expect(
+        status,
+        `test user ${user} — run \`release-tests run --suite 'v16p_*'\` against this site first`
+      ).to.eq(200);
+    });
+});
+
+Cypress.Commands.add("impersonate", (key) => {
+  const user = Cypress.env("personas")[key];
+  cy.asAdmin();
+  cy.requirePersona(key);
+  cy.window()
+    .its("frappe.csrf_token")
+    .then((token) =>
+      cy.request({
+        method: "POST",
+        url: "/api/method/frappe.core.doctype.user.user.impersonate",
+        form: true,
+        headers: { "X-Frappe-CSRF-Token": token },
+        body: { user, reason: "Release test (Cypress)" },
+      })
+    );
+  return cy.wrap(user);
+});
+
+// Open a list view's view-switcher menu (Espresso dropdown).
+Cypress.Commands.add("openViewSwitcher", () => {
+  cy.get(".custom-btn-group.view-switcher button", { timeout: 20000 }).first().click();
+  return cy.get(".es-menu[data-state='open']");
+});
+
+Cypress.Commands.add("closeMenu", () => {
+  cy.focused().trigger("keydown", { key: "Escape" });
+});
+
+// Skip a polished spec on a site that isn't running version-16-polished, the same
+// way the API suites do: the per-module Sidebar DocType ships only in polished.
+// Uses requests only — plain v16 has no /desk route to visit.
+Cypress.Commands.add("skipUnlessPolished", (ctx) => {
+  cy.clearCookies();
+  cy.apiLogin();
+  cy.request({ url: "/api/resource/DocType/Sidebar", failOnStatusCode: false }).then((resp) => {
+    if (resp.status !== 200) {
+      cy.log("Not a version-16-polished site (no Sidebar DocType): skipping");
+      ctx.skip();
+    }
+  });
+});
