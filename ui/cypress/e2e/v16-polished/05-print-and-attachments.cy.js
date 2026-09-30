@@ -1,5 +1,9 @@
 // v16-polished · the new print formats and the attachment preview pane.
 describe("v16-polished · print [accounts]", () => {
+  before(function () {
+    cy.skipUnlessPolished(this);
+  });
+
   it("opens a draft Sales Invoice in 'Sales Invoice Modern with Images'", () => {
     cy.impersonate("accounts");
     cy.request(
@@ -25,6 +29,10 @@ describe("v16-polished · print [accounts]", () => {
 });
 
 describe("v16-polished · attachments [sales]", () => {
+  before(function () {
+    cy.skipUnlessPolished(this);
+  });
+
   it("previews an attachment in the form sidebar", () => {
     cy.impersonate("sales");
     cy.visit("/desk/todo");

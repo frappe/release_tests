@@ -255,3 +255,22 @@ def test_independent_steps_keep_running_after_a_failure(fake_client):
 
     statuses = [s.status for s in run_suite(fake_client(), Independent(), {}).steps]
     assert statuses == ["fail", "pass"]
+
+
+def test_failed_setup_blocks_even_an_independent_suite(fake_client):
+    class NeedsSetup(ReleaseSuite):
+        name = "needs_setup"
+        independent_steps = True
+
+        def build_steps(self, versions):
+            return [
+                Step(
+                    "setup",
+                    lambda c, ctx: _raise(RuntimeError("no company"))(),
+                    blocks_on_fail=True,
+                ),
+                Step("check", lambda c, ctx: None),
+            ]
+
+    steps = run_suite(fake_client(), NeedsSetup(), {}).steps
+    assert [(s.status, s.error) for s in steps][1] == ("skip", "blocked by earlier failure")

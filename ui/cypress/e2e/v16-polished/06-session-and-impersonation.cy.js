@@ -1,5 +1,9 @@
 // v16-polished · logged-out handling (frappe#37412) and Impersonate itself.
 describe("v16-polished · logged out", () => {
+  before(function () {
+    cy.skipUnlessPolished(this);
+  });
+
   it("[guest] a desk URL sends a logged-out visitor to login", () => {
     cy.clearCookies();
     cy.visit("/desk/todo", { failOnStatusCode: false });
@@ -22,6 +26,10 @@ describe("v16-polished · logged out", () => {
 });
 
 describe("v16-polished · impersonation [admin → sales]", () => {
+  before(function () {
+    cy.skipUnlessPolished(this);
+  });
+
   it("acts as the user, shows the banner, and leaves an audit trail", () => {
     const user = Cypress.env("personas").sales;
     cy.impersonate("sales");

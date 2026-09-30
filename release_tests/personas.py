@@ -85,9 +85,13 @@ def ensure_custom_roles(client: FrappeClient) -> None:
 
 
 def ensure_user(client: FrappeClient, key: str) -> Persona:
-    """Get-or-create the persona's User, enabled, with at least its roles, and this
-    run's password. Roles are only ever added, never removed, so a person who
-    reuses one of these accounts on a shared site doesn't lose what they added."""
+    """Get-or-create the persona's User, enabled, with exactly its roles, and this
+    run's password.
+
+    Roles are reset to the persona's own set every run. These accounts exist only
+    for testing, and an extra role (say someone gave the reader System Manager)
+    would make every "must be refused" check fail and be blamed on the product.
+    """
     from .suites.base import SkipStep
 
     persona = PERSONAS[key]
@@ -123,9 +127,8 @@ def ensure_user(client: FrappeClient, key: str) -> Persona:
     run_key = (client.url, client.session.headers.get("Host"), persona.email)
     doc = client.get_doc("User", persona.email)
     have = {row.get("role") for row in doc.get("roles") or []}
-    missing = [r for r in persona.roles if r not in have]
-    if missing or not doc.get("enabled"):
-        doc["roles"] = (doc.get("roles") or []) + [{"role": r} for r in missing]
+    if have != set(persona.roles) or not doc.get("enabled"):
+        doc["roles"] = [{"role": r} for r in persona.roles]
         doc["enabled"] = 1
         client.call("frappe.client.save", doc=_json(doc))
     if run_key not in _PASSWORD_SET:

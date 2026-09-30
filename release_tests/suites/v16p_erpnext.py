@@ -485,7 +485,7 @@ class V16PERPNextSuite(ReleaseSuite):
 
     def build_steps(self, versions: Versions) -> list[Step]:
         return [
-            Step("setup: masters + one draft per printed DocType", _setup),
+            Step("setup: masters + one draft per printed DocType", _setup, blocks_on_fail=True),
             Step("32 new print formats installed and enabled", _formats_shipped),
             Step("default print formats point at enabled formats", _default_formats_valid),
             Step("each new format renders [sales, accounts, purchase]", _render_all_formats),

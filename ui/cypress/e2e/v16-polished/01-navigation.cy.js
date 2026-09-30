@@ -2,6 +2,10 @@
 // Shell-prefixed URLs, module sidebars, the notification panel and navbar search
 // are what every user meets first; a break here is a break for everyone.
 describe("v16-polished · navigation [sales]", () => {
+  before(function () {
+    cy.skipUnlessPolished(this);
+  });
+
   beforeEach(() => {
     cy.impersonate("sales");
   });

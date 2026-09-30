@@ -73,6 +73,9 @@ class CheckFailed(AssertionError):
 class Step:
     name: str
     fn: StepFn
+    # A step the rest depend on (e.g. setup). If it fails, later steps are blocked
+    # even in an independent_steps suite, rather than failing with confusing errors.
+    blocks_on_fail: bool = False
 
 
 class ReleaseSuite:

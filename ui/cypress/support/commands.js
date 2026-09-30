@@ -174,3 +174,17 @@ Cypress.Commands.add("openViewSwitcher", () => {
 Cypress.Commands.add("closeMenu", () => {
   cy.focused().trigger("keydown", { key: "Escape" });
 });
+
+// Skip a polished spec on a site that isn't running version-16-polished, the same
+// way the API suites do: the per-module Sidebar DocType ships only in polished.
+// Uses requests only — plain v16 has no /desk route to visit.
+Cypress.Commands.add("skipUnlessPolished", (ctx) => {
+  cy.clearCookies();
+  cy.apiLogin();
+  cy.request({ url: "/api/resource/DocType/Sidebar", failOnStatusCode: false }).then((resp) => {
+    if (resp.status !== 200) {
+      cy.log("Not a version-16-polished site (no Sidebar DocType): skipping");
+      ctx.skip();
+    }
+  });
+});

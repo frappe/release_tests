@@ -23,8 +23,6 @@ from .base import ReleaseSuite, SkipStep, Step
 
 # Print Heading: a core DocType that allows import and is named by its own field.
 IMPORT_DOCTYPE = "Print Heading"
-RT_HEADING_EXISTING = "RT Import Existing"
-RT_HEADING_NEW = "RT Import New"
 IMPORT_TIMEOUT_S = 90
 
 
@@ -123,29 +121,20 @@ def _list_layout_per_user(client: FrappeClient, ctx: dict) -> None:
 
 def _insert_or_update_import(client: FrappeClient, ctx: dict) -> None:
     """Data import in the new Insert-or-Update mode: one row updates, one inserts."""
+    # Both headings are named for this run, so the test only ever touches records
+    # it created itself — never a heading that happens to share a fixed name.
     stamp = str(int(time.time()))
-    if client.get_list(
-        IMPORT_DOCTYPE, filters={"name": RT_HEADING_EXISTING}, fields=["name"], limit=1
-    ):
-        client.call(
-            "frappe.client.set_value",
-            doctype=IMPORT_DOCTYPE,
-            name=RT_HEADING_EXISTING,
-            fieldname="description",
-            value="old",
-        )
-    else:
-        client.insert(
-            {"doctype": IMPORT_DOCTYPE, "print_heading": RT_HEADING_EXISTING, "description": "old"}
-        )
-    if client.get_list(IMPORT_DOCTYPE, filters={"name": RT_HEADING_NEW}, fields=["name"], limit=1):
-        client.delete(IMPORT_DOCTYPE, RT_HEADING_NEW)
+    existing_heading = f"RT Import Existing {stamp}"
+    new_heading = f"RT Import New {stamp}"
+    client.insert(
+        {"doctype": IMPORT_DOCTYPE, "print_heading": existing_heading, "description": "old"}
+    )
 
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(["ID", "Print Heading", "Description"])
-    writer.writerow([RT_HEADING_EXISTING, RT_HEADING_EXISTING, f"updated {stamp}"])
-    writer.writerow(["", RT_HEADING_NEW, f"inserted {stamp}"])
+    writer.writerow([existing_heading, existing_heading, f"updated {stamp}"])
+    writer.writerow(["", new_heading, f"inserted {stamp}"])
     upload = client.upload(
         {"is_private": 1}, f"rt-heading-import-{stamp}.csv", buf.getvalue().encode()
     )
@@ -182,7 +171,7 @@ def _insert_or_update_import(client: FrappeClient, ctx: dict) -> None:
         actual=f"{status} — {import_errors(client, data_import)}",
         endpoint="Data Import",
     )
-    updated = client.get_doc(IMPORT_DOCTYPE, RT_HEADING_EXISTING).get("description")
+    updated = client.get_doc(IMPORT_DOCTYPE, existing_heading).get("description")
     ensure(
         updated == f"updated {stamp}",
         "existing row updated by Insert-or-Update",
@@ -191,12 +180,12 @@ def _insert_or_update_import(client: FrappeClient, ctx: dict) -> None:
         endpoint=f"Data Import {data_import}",
     )
     inserted = client.get_list(
-        IMPORT_DOCTYPE, filters={"name": RT_HEADING_NEW}, fields=["name"], limit=1
+        IMPORT_DOCTYPE, filters={"name": new_heading}, fields=["name"], limit=1
     )
     ensure(
         bool(inserted),
         "new row inserted by Insert-or-Update",
-        expected=f"{IMPORT_DOCTYPE} '{RT_HEADING_NEW}' created",
+        expected=f"{IMPORT_DOCTYPE} '{new_heading}' created",
         actual="not created",
         endpoint=f"Data Import {data_import}",
     )

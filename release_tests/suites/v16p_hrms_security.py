@@ -239,7 +239,7 @@ class V16PHRMSSecuritySuite(ReleaseSuite):
 
     def build_steps(self, versions: Versions) -> list[Step]:
         return [
-            Step("setup: employees A/B, scoped HR user, self-service user", _setup),
+            Step("setup: employees A/B, scoped HR user, self-service user", _setup, blocks_on_fail=True),
             Step("malformed attendance input rejected [hr]", _invalid_input_rejected),
             Step(
                 "attendance for an employee outside scope refused [hr_scoped]",

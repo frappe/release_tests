@@ -1,5 +1,9 @@
 // v16-polished · list view: the single view-switcher and saved layouts, as a Sales User.
 describe("v16-polished · list view [sales]", () => {
+  before(function () {
+    cy.skipUnlessPolished(this);
+  });
+
   beforeEach(() => {
     cy.impersonate("sales");
     cy.visit("/desk/todo");

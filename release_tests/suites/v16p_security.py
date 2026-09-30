@@ -104,10 +104,19 @@ def _export_allowed_for_exporter(client: FrappeClient, ctx: dict) -> None:
 def _owner_only_export(client: FrappeClient, ctx: dict) -> None:
     _need_probe(ctx)
     owner = personas.login_as(client, "owner_exporter")
-    expect_allowed(
+    resp = expect_allowed(
         owner,
         "owner-only exporter exports a row they own",
         lambda: _export(owner, [ctx["owner_row"]]),
+        endpoint=EXPORT,
+        guards="frappe#42577",
+    )
+    ensure(
+        ctx["owner_row"] in resp.text,
+        "owner-only export contains the owner's row",
+        expected=f"row {ctx['owner_row']} in the CSV",
+        actual=resp.text[:200],
+        who=owner,
         endpoint=EXPORT,
         guards="frappe#42577",
     )
@@ -620,7 +629,7 @@ class V16PSecuritySuite(ReleaseSuite):
 
     def build_steps(self, versions: Versions) -> list[Step]:
         return [
-            Step("setup: probe DocType + role users", _setup),
+            Step("setup: probe DocType + role users", _setup, blocks_on_fail=True),
             Step("export refused without Export permission [reader]", _export_refused_for_reader),
             Step("export allowed with Export permission [exporter]", _export_allowed_for_exporter),
             Step("owner-only export: own rows only [owner_exporter]", _owner_only_export),

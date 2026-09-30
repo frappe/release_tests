@@ -146,7 +146,7 @@ class V16PHRMSSuite(ReleaseSuite):
 
     def build_steps(self, versions: Versions) -> list[Step]:
         return [
-            Step("setup: designation + HR user", _setup),
+            Step("setup: designation + HR user", _setup, blocks_on_fail=True),
             Step("Job Offer without applicant; email mandatory [hr]", _job_offer_without_applicant),
             Step("Employee has Job Applicant / Job Offer fields", _employee_job_fields),
             Step("Job Opening close and reopen [hr]", _job_opening_close_reopen),

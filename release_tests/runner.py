@@ -94,7 +94,7 @@ def run_suite(
                 )
             )
             result.status = "fail"
-            if not (continue_on_fail or suite.independent_steps):
+            if step.blocks_on_fail or not (continue_on_fail or suite.independent_steps):
                 blocked = True
 
     if result.status != "fail" and all(s.status == "skip" for s in result.steps):

@@ -17,6 +17,10 @@ function actionsMenu() {
 }
 
 describe("v16-polished · role-based visibility", () => {
+  before(function () {
+    cy.skipUnlessPolished(this);
+  });
+
   beforeEach(function () {
     cy.asAdmin();
     probeExists().then((status) => {

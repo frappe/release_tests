@@ -6,6 +6,10 @@ function openSettings(doctype) {
 }
 
 describe("v16-polished · DocType settings dialog", () => {
+  before(function () {
+    cy.skipUnlessPolished(this);
+  });
+
   it("[admin] shows the permission tabs", () => {
     cy.asAdmin();
     openSettings("ToDo").should("contain", "Roles").and("contain", "User Permissions");
