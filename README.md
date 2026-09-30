@@ -88,6 +88,29 @@ non-zero if any step failed (CI-friendly). Suites whose app isn't installed are
 > bench). Every suite auto-skips when its app is absent, so they're exercised on
 > the first target that has the app.
 
+### version-16-polished release suites
+
+Six `v16p_*` suites cover the polished release's security fixes and features. They
+run **as ordinary users with different roles** (see `release_tests/personas.py`),
+because Administrator bypasses the permission checks that break. There is also a
+Cypress folder, `ui/cypress/e2e/v16-polished`, whose specs act as those users
+through Frappe's Impersonate. They skip on any site that isn't polished.
+
+```bash
+release-tests run --target v16p --suite 'v16p_*' --continue-on-fail
+cd ui && CYPRESS_BASE_URL=https://your-site CYPRESS_ADMIN_PASSWORD=... npm run test:v16p
+```
+
+The target needs `allow_customisations = true` for the permission probe DocType,
+and a background worker for the data-import checks. The full case list is in
+[docs/v16-polished-test-cases.md](docs/v16-polished-test-cases.md).
+
+**Reading a run.** The summary leads with the **run rate**: how many checks reached a
+verdict. Then it lists **issues found**. Each failure is labelled *issue* (the product
+misbehaved), *needs triage* (the server unexpectedly refused a step), or *harness* (the
+test broke). It names the check, the user and roles, expected vs actual, the endpoint
+and the upstream change. `results/release-<ts>-failures.md` lists issues first.
+
 ### Adding / extending a suite
 
 Subclass `ReleaseSuite`, set `name` + `required_app`, and return ordered `Step`s
