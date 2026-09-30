@@ -11,11 +11,8 @@ describe("v15 · Sales Invoice", () => {
 
     cy.fillLink("customer", Cypress.env("customer"));
 
-    cy.get('[data-fieldname="items"] .grid-add-row', { timeout: 20000 }).click();
-    cy.selectLink(
-      '[data-fieldname="items"] .grid-body [data-fieldname="item_code"] input:visible',
-      Cypress.env("item")
-    );
+    cy.fillGridLink("items", 1, "item_code", Cypress.env("item"));
+    cy.waitForItemRate();
 
     cy.get("body").type("{ctrl}s");
     cy.get(".title-area .title-text", { timeout: 30000 })

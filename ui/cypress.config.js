@@ -15,6 +15,11 @@ module.exports = defineConfig({
     screenshotOnRunFailure: true,
     defaultCommandTimeout: 15000,
     pageLoadTimeout: 60000,
+    // Frappe's Desk has a fixed top navbar and grids have sticky column headers.
+    // Cypress's default auto-scroll ("top") lines the target up right behind those
+    // fixed elements, so the click/type lands on the wrong thing. "center" keeps
+    // every auto-scrolled target clear of fixed chrome on all four specs.
+    scrollBehavior: "center",
   },
   env: {
     admin_user: process.env.CYPRESS_ADMIN_USER || "Administrator",

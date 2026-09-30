@@ -3,6 +3,19 @@
 // Compliance applies the tax template from the company/customer GSTINs. The
 // e-invoice IRN itself is validated by the API suite (needs the IC API); here we
 // prove the GST invoice + tax computation build correctly from the UI.
+//
+// KNOWN DATA ISSUE, not a test bug: on the target site this currently fails at
+// the final "a tax row was added" assertion, not because of anything in this
+// spec or in selectLink. Checked directly against the site's REST API: the
+// "Release GST Customer" fixture has gst_category "Unregistered" and no GSTIN
+// at all. India Compliance's real tax-template auto-apply logic correctly
+// declines to add GST for an unregistered customer — that's correct app
+// behavior given the fixture's current data, not something any UI interaction
+// can or should work around. Rate/amount DO populate correctly (see
+// waitForItemRate below), proving item selection itself works; the fixture
+// needs a valid GSTIN + a registered gst_category (e.g. "Registered Regular")
+// for this assertion to ever pass. That's the API suite's fixture setup to
+// fix, not this file.
 describe("v16 · GST Sales Invoice", () => {
   beforeEach(() => {
     cy.apiLogin();
@@ -13,11 +26,8 @@ describe("v16 · GST Sales Invoice", () => {
 
     cy.fillLink("customer", Cypress.env("gst_customer"));
 
-    cy.get('[data-fieldname="items"] .grid-add-row', { timeout: 20000 }).click();
-    cy.selectLink(
-      '[data-fieldname="items"] .grid-body [data-fieldname="item_code"] input:visible',
-      Cypress.env("gst_item")
-    );
+    cy.fillGridLink("items", 1, "item_code", Cypress.env("gst_item"));
+    cy.waitForItemRate();
 
     // Save (draft) — GST taxes compute on save from the item's tax template.
     cy.get("body").type("{ctrl}s");

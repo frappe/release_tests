@@ -10,12 +10,10 @@ describe("v16 · Sales Invoice", () => {
     // Customer (existing).
     cy.fillLink("customer", Cypress.env("customer"));
 
-    // Add an item row and pick an existing item.
-    cy.get('[data-fieldname="items"] .grid-add-row', { timeout: 20000 }).click();
-    cy.selectLink(
-      '[data-fieldname="items"] .grid-body [data-fieldname="item_code"] input:visible',
-      Cypress.env("item")
-    );
+    // Fill the item into row 1, which the grid already renders empty by default —
+    // clicking `.grid-add-row` here would append an unwanted row 2 instead.
+    cy.fillGridLink("items", 1, "item_code", Cypress.env("item"));
+    cy.waitForItemRate();
 
     // Save (Ctrl/Cmd+S) and confirm it left the "New" state (got a name).
     cy.get("body").type("{ctrl}s");

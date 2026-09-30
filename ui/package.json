@@ -9,6 +9,7 @@
     "test:v15": "cypress run --spec 'cypress/e2e/v15/**/*.cy.js'"
   },
   "devDependencies": {
-    "cypress": "^13.15.0"
+    "cypress": "^13.15.0",
+    "cypress-real-events": "^1.15.1"
   }
 }
