@@ -12,6 +12,24 @@ describe("v16 · customisation layer", () => {
     cy.apiLogin();
   });
 
+  // The UI workflow can be launched on its own, against any site. This spec only
+  // means anything where the pack has been provisioned (by the `customisations`
+  // API suite, which itself requires the site to opt in). Without this check the
+  // spec fails on missing fields and DocTypes, which reads as a product
+  // regression rather than "the prerequisite was never run here".
+  before(function () {
+    cy.apiLogin();
+    cy.request({
+      url: "/api/resource/Custom Field/Sales Invoice-rt_release_ref",
+      failOnStatusCode: false,
+    }).then((res) => {
+      if (res.status !== 200) {
+        cy.log("Customisation pack not present on this site — skipping.");
+        this.skip();
+      }
+    });
+  });
+
   it("renders the custom field and the property setter's relabelled field", () => {
     cy.visit("/app/sales-invoice/new");
 

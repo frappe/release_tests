@@ -139,7 +139,10 @@ def _probe(client: FrappeClient, doc: dict, filters: list) -> bool:
             "to cover the in-Python filter path"
         ) from exc
     if not isinstance(result, dict) or "evaluate_filters" not in result:
-        raise SkipStep(f"rt_filter_probe returned an unexpected payload: {result!r}")
+        # The endpoint answered, so it is installed — it just answered wrongly.
+        # Skipping here would let the suite pass while the cross-path check it
+        # exists for never ran, which is the whole failure mode being guarded.
+        raise AssertionError(f"rt_filter_probe returned an unexpected payload: {result!r}")
     return bool(result["evaluate_filters"])
 
 
