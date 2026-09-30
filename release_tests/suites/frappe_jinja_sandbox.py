@@ -15,6 +15,7 @@ handled error rather than a 500.
 
 from __future__ import annotations
 
+import re
 from typing import ClassVar
 
 from .. import factories
@@ -126,17 +127,36 @@ def _utils_filters_resolve(client: FrappeClient, ctx: dict) -> None:
 
     A sandbox that silently yields nothing is the failure mode that matters here:
     the page still renders, so nothing looks broken, but every computed field on a
-    customer-facing invoice comes out blank.
+    customer-facing invoice comes out blank. Each helper is therefore checked for
+    its actual value, not merely that its marker survived — fmt_money and
+    formatdate are exactly the calls a restricted render context drops.
     """
     html = ctx["rendered"]
-    start = html.find('id="rt-rows"')
-    if start == -1:
-        raise SkipStep("rt-rows marker missing; allowed-render step already reported the problem")
-    fragment = html[start : start + 80]
-    if f">{ctx['expected_rows']}<" not in fragment:
+
+    def fragment(marker: str) -> str:
+        start = html.find(f'id="{marker}"')
+        if start == -1:
+            raise SkipStep(f"{marker} marker missing; the allowed-render step already reported it")
+        chunk = html[start : start + 200]
+        inner = chunk.split(">", 1)[1] if ">" in chunk else chunk
+        return inner.split("<", 1)[0].strip()
+
+    rows = fragment("rt-rows")
+    if rows != str(ctx["expected_rows"]):
         raise AssertionError(
-            f"'doc.items | length' rendered empty or wrong inside the sandbox — "
-            f"expected {ctx['expected_rows']} rows, got {fragment!r}"
+            f"'doc.items | length' rendered {rows!r}, expected {ctx['expected_rows']}"
+        )
+
+    # fmt_money must produce the grand total with digits, not an empty string.
+    money = fragment("rt-total")
+    if not any(ch.isdigit() for ch in money):
+        raise AssertionError(f"frappe.utils.fmt_money rendered no value: {money!r}")
+
+    # formatdate must honour the dd-MM-yyyy pattern the template asks for.
+    when = fragment("rt-when")
+    if not re.fullmatch(r"\d{2}-\d{2}-\d{4}", when):
+        raise AssertionError(
+            f"frappe.utils.formatdate rendered {when!r}, expected dd-MM-yyyy"
         )
 
 

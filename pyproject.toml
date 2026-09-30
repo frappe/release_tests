@@ -37,5 +37,16 @@ packages = ["release_tests"]
 line-length = 100
 target-version = "py310"
 
+[tool.ruff.lint]
+# Timezone-aware datetimes (DTZ) are deliberately not enforced here. These helpers
+# build *date strings* that are posted to a target Frappe site — posting dates,
+# leave dates, period bounds. The timezone that matters is the target site's, not
+# the harness host's, so pinning them to UTC would be actively wrong: near midnight
+# UTC's date differs from the operator's, silently shifting a posting date by a day.
+# Getting this genuinely right means asking the site for its own date (as
+# frappe_filters already does via a row's `creation` stamp), which is a refactor,
+# not a lint fix. Until then, naive local dates are the intended behaviour.
+ignore = ["DTZ005", "DTZ011"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

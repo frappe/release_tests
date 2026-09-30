@@ -60,14 +60,23 @@ describe("v16 · customisation layer", () => {
 
     // Child table on a wholly custom DocType.
     //
-    // Fill the grid's existing empty row 1 rather than clicking .grid-add-row,
-    // which appends a row 2 and leaves row 1 blank (see cy.fillGridLink and its
-    // note in support/commands.js). The cell renders as a static div until it is
-    // clicked into edit mode, so click it open before typing. This does not use
-    // fillGridLink itself because that drives a Link field's autocomplete, and
-    // RT Release Note Item.item_code is a plain Data field with no suggestions.
-    const cell =
-      '[data-fieldname="notes"] .grid-body .grid-row[data-idx="1"] [data-fieldname="item_code"]';
+    // Whether a grid shows an empty row 1 up front is not universal: ERPNext's own
+    // controllers add item rows to transaction grids (transaction.js), which is why
+    // .grid-add-row on Sales Invoice appends a *second* row — but core grid.js has
+    // no such path, so a plain custom DocType starts with none. Rather than bet on
+    // either, add a row only when row 1 isn't already there, then fill row 1.
+    const grid = '[data-fieldname="notes"]';
+    const row1 = `${grid} .grid-body .grid-row[data-idx="1"]`;
+
+    cy.get(grid, { timeout: 30000 }).should("exist");
+    cy.get("body").then(($body) => {
+      if ($body.find(row1).length === 0) {
+        cy.get(`${grid} .grid-add-row`).click();
+      }
+    });
+
+    // The cell renders as a static div until clicked into edit mode.
+    const cell = `${row1} [data-fieldname="item_code"]`;
     cy.get(cell, { timeout: 20000 }).scrollIntoView({ block: "center" }).should("be.visible").click();
     cy.get(`${cell} input:visible`).type(Cypress.env("item"));
 

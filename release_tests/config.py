@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 try:  # py311+
     import tomllib
@@ -41,6 +42,23 @@ class Target:
             raise ValueError(f"target {self.label!r}: token auth requires api_key + api_secret")
 
 
+def as_bool(value: Any) -> bool:
+    """Parse an opt-in flag strictly.
+
+    ``bool("false")`` is True, so a caller passing the *string* "false" or "0"
+    through a JSON/TOML boundary would silently opt in. Anything not recognised as
+    affirmative is False — for a flag that authorises writing schema to someone's
+    site, guessing wrong in the permissive direction is the expensive mistake.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value == 1
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
+
+
 def _resolve(value: str | None) -> str | None:
     """Resolve ``$ENV_VAR`` references against the environment."""
     if isinstance(value, str) and value.startswith("$"):
@@ -68,6 +86,7 @@ def load_targets(path: str | Path) -> list[Target]:
                 api_key=_resolve(raw.get("api_key")),
                 api_secret=_resolve(raw.get("api_secret")),
                 host_header=raw.get("host_header"),
+                allow_customisations=as_bool(raw.get("allow_customisations")),
             )
         )
     return targets

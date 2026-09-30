@@ -25,6 +25,32 @@ from .base import ReleaseSuite, SkipStep, Step
 RT_TODO_MARKER = "RT-PERM-PROBE"
 
 
+# Frappe words a refusal several different ways depending on which check fired;
+# the wording observed against v16 for a document-level refusal is
+# "does not have access to this document".
+_DENIAL_PHRASES = (
+    "does not have access",
+    "not permitted",
+    "insufficient permission",
+    "not enough permission",
+    "not allowed",
+    "permissionerror",
+)
+
+
+def _is_permission_denial(exc: FrappeAPIError) -> bool:
+    """True only for a genuine permission refusal, not any old API error.
+
+    The status gate is what does the real work: a 5xx, a dropped connection or an
+    expired session must never be mistaken for "permissions held", which is the one
+    thing the step using this exists to prove.
+    """
+    if exc.status not in (401, 403):
+        return False
+    text = str(exc).lower()
+    return any(phrase in text for phrase in _DENIAL_PHRASES)
+
+
 def _as_limited(client: FrappeClient, ctx: dict) -> FrappeClient:
     return ctx["limited_client"]
 
@@ -34,7 +60,7 @@ def _seed(client: FrappeClient, ctx: dict) -> None:
     user = factories.ensure_limited_user(client)
     limited = FrappeClient(client.url, host_header=client.session.headers.get("Host"))
     try:
-        limited.login(user, factories.RT_LIMITED_PASSWORD)
+        limited.login(user, factories.limited_password())
     except FrappeAPIError as exc:
         raise SkipStep(
             f"could not log in as the restricted user {user}: {str(exc)[:160]}"
@@ -138,8 +164,15 @@ def _cannot_reach_others(client: FrappeClient, ctx: dict) -> None:
             fieldname="session_expiry",
             value="24:00",
         )
-    except FrappeAPIError:
-        return  # correctly refused
+    except FrappeAPIError as exc:
+        # Accept only an actual denial. Catching every API error would let a 500,
+        # an expired session or a network fault stand in for "permissions held",
+        # which is the one thing this step exists to prove.
+        if _is_permission_denial(exc):
+            return
+        raise AssertionError(
+            f"expected a permission denial, got {exc.status}: {str(exc)[:200]}"
+        ) from exc
     raise AssertionError(
         "a Sales User was allowed to write System Settings — permission checks are not holding"
     )

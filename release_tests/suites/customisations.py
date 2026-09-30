@@ -19,6 +19,8 @@ from ..client import FrappeClient
 from ..gating import Versions
 from .base import ReleaseSuite, SkipStep, Step
 
+RT_NOTE_TITLE = "Release customisation check"
+
 
 def _needs_pack(step_fn):
     """Skip a step when provisioning was refused, rather than let it fail on missing state.
@@ -127,14 +129,16 @@ def _custom_doctype_accepts_child_rows(client: FrappeClient, ctx: dict) -> None:
     from ..reset import purge
 
     # Each run needs a fresh insert to prove naming and child rows still work, so
-    # clear the previous run's note rather than letting them accumulate.
-    purge(client, customisations.RT_NOTE_DOCTYPE, {})
+    # clear the previous run's note rather than letting them accumulate. Scoped to
+    # this suite's own title: the DocType is ours, but a person poking at it on the
+    # target should not have their rows deleted from under them.
+    purge(client, customisations.RT_NOTE_DOCTYPE, {"title": RT_NOTE_TITLE})
 
     note = client.insert(
         {
             "doctype": customisations.RT_NOTE_DOCTYPE,
             "naming_series": "RT-NOTE-.#####",
-            "title": "Release customisation check",
+            "title": RT_NOTE_TITLE,
             "sales_invoice": ctx.get("invoice"),
             "notes": [
                 {"item_code": ctx["item"], "remark": "provisioned by release_tests"},

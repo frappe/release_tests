@@ -110,12 +110,30 @@ def _datetime_end_of_day(client: FrappeClient, ctx: dict) -> None:
         )
 
 
+def _probe_absent(exc: FrappeAPIError) -> bool:
+    """True only when the probe endpoint isn't installed on this site.
+
+    Frappe answers a missing/unexposed whitelisted method with 403/404 and a
+    "not whitelisted" message. Anything else — a 500 from inside the script, a
+    bad argument — means the probe *is* there and genuinely failed, which must
+    surface as a failure rather than be waved through as "not installed".
+    """
+    if exc.status not in (403, 404, 417):
+        return False
+    text = str(exc).lower()
+    return "not whitelisted" in text or "not found" in text or "does not exist" in text
+
+
 def _probe(client: FrappeClient, doc: dict, filters: list) -> bool:
     try:
         result = client.call(
             "rt_filter_probe", probe_doc=json.dumps(doc), probe_filters=json.dumps(filters)
         )
     except FrappeAPIError as exc:
+        if not _probe_absent(exc):
+            raise AssertionError(
+                f"rt_filter_probe is installed but failed ({exc.status}): {str(exc)[:200]}"
+            ) from exc
         raise SkipStep(
             "rt_filter_probe not available — install the customisation pack on this site "
             "to cover the in-Python filter path"
