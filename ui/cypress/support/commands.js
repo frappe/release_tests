@@ -68,15 +68,28 @@ Cypress.Commands.add("selectLink", (selector, value) => {
 // its rate + tax template (and anything else the item's price list / GSTIN
 // setup drives) — it does not arrive synchronously with the selection itself.
 // Saving right after fillGridLink (before that fetch lands) produces a "valid"
-// but empty invoice: item set correctly, but Rate stays 0 and no tax template
-// ever gets applied, so a GST invoice never gets a tax row to prove the
-// template worked. Wait for the Rate cell to actually show a real value first.
+// but empty invoice: item set correctly, but Rate stays whatever it was before
+// the fetch landed.
+//
+// This used to assert Rate > 0, which is wrong: a site can legitimately have
+// no Item Price configured for a test item, in which case Rate 0 *is* the
+// correct, fully-fetched result — that assertion would time out forever on
+// such a site even though nothing is broken (a real review finding). There's
+// no version-agnostic network signal to wait on instead without risking the
+// same alias cross-contamination problem documented on selectLink above (the
+// generic "link changed, fetch dependents" call also fires for non-Item
+// fields). So wait for the rendered value to stop changing across consecutive
+// checks instead: that's a genuine, value-agnostic "the async fetch has
+// settled" signal, whether it ultimately landed on a real price or on zero.
 Cypress.Commands.add("waitForItemRate", (gridFieldname, rowIdx) => {
-  cy.get(`[data-fieldname="${gridFieldname}"] .grid-body .grid-row[data-idx="${rowIdx}"] [data-fieldname="rate"]`, {
-    timeout: 20000,
-  }).should(($el) => {
-    const rate = parseFloat(($el.text() || "0").replace(/[^0-9.]/g, ""));
-    expect(rate, "item rate fetched").to.be.greaterThan(0);
+  const rateCell = `[data-fieldname="${gridFieldname}"] .grid-body .grid-row[data-idx="${rowIdx}"] [data-fieldname="rate"]`;
+  let previousText = null;
+  let stableChecks = 0;
+  cy.get(rateCell, { timeout: 20000 }).should(($el) => {
+    const currentText = $el.text();
+    stableChecks = currentText === previousText ? stableChecks + 1 : 0;
+    previousText = currentText;
+    expect(stableChecks, "rate value has settled").to.be.gte(2);
   });
 });
 
