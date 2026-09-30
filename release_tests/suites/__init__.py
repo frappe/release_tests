@@ -38,6 +38,12 @@ def all_suites() -> list[ReleaseSuite]:
         insights,
         ksa_compliance,
         learning,
+        v16p_erpnext,
+        v16p_frappe_features,
+        v16p_hrms,
+        v16p_hrms_security,
+        v16p_security,
+        v16p_upgrade_checks,
         webshop,
     )
 
@@ -68,6 +74,13 @@ def all_suites() -> list[ReleaseSuite]:
         india_compliance.IndiaComplianceSuite(),
         ksa_compliance.KSAComplianceSuite(),
         customisations.CustomisationsSuite(),
+        # version-16-polished release suites; skip on any site that isn't polished.
+        v16p_upgrade_checks.V16PUpgradeChecksSuite(),
+        v16p_security.V16PSecuritySuite(),
+        v16p_frappe_features.V16PFrappeFeaturesSuite(),
+        v16p_erpnext.V16PERPNextSuite(),
+        v16p_hrms_security.V16PHRMSSecuritySuite(),
+        v16p_hrms.V16PHRMSSuite(),
     ]
 
 
