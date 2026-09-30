@@ -233,9 +233,13 @@ def _opening_stock_dialog(client: FrappeClient, ctx: dict) -> None:
             "item_defaults": [{"company": ctx["company"], "default_warehouse": ctx["warehouse"]}],
         }
     )
-    args = dict(
-        item_code=code, company=ctx["company"], qty=5, valuation_rate=10, warehouse=ctx["warehouse"]
-    )
+    args = {
+        "item_code": code,
+        "company": ctx["company"],
+        "qty": 5,
+        "valuation_rate": 10,
+        "warehouse": ctx["warehouse"],
+    }
     try:
         stock = personas.login_as(client, "stock")
         expect_denied(
@@ -282,7 +286,7 @@ def _opening_stock_serial_batch(client: FrappeClient, ctx: dict) -> None:
         expect_allowed(
             item_mgr,
             f"create a {kind} item with opening stock 3",
-            lambda code=code, extra=extra: item_mgr.insert(
+            lambda code=code, extra=extra, kind=kind: item_mgr.insert(
                 {
                     **_hsn(client),
                     "doctype": "Item",
@@ -413,15 +417,18 @@ def _party_import(client: FrappeClient, ctx: dict) -> None:
     name = client.get_list(
         "Customer", filters={"customer_name": customer}, fields=["name"], limit=1
     )
-    linked = lambda dt: client.get_list(  # noqa: E731
-        dt,
-        filters=[
-            ["Dynamic Link", "link_doctype", "=", "Customer"],
-            ["Dynamic Link", "link_name", "=", name[0]["name"] if name else "-"],
-        ],
-        fields=["name"],
-        limit=10,
-    )
+
+    def linked(doctype: str) -> list[dict]:
+        return client.get_list(
+            doctype,
+            filters=[
+                ["Dynamic Link", "link_doctype", "=", "Customer"],
+                ["Dynamic Link", "link_name", "=", name[0]["name"] if name else "-"],
+            ],
+            fields=["name"],
+            limit=10,
+        )
+
     contacts, addresses = (linked("Contact"), linked("Address")) if name else ([], [])
     ensure(
         bool(name) and len(contacts) == 2 and len(addresses) == 1,
