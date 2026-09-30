@@ -2,11 +2,12 @@
   "name": "release_tests_ui",
   "version": "0.1.0",
   "private": true,
-  "description": "Cypress UI (browser) tests for Frappe/ERPNext, organised by version (v15/v16).",
+  "description": "Cypress UI (browser) tests for Frappe/ERPNext, organised by version (v15/v16/v16-polished).",
   "scripts": {
     "cy:open": "cypress open",
     "test:v16": "cypress run --spec 'cypress/e2e/v16/**/*.cy.js'",
-    "test:v15": "cypress run --spec 'cypress/e2e/v15/**/*.cy.js'"
+    "test:v15": "cypress run --spec 'cypress/e2e/v15/**/*.cy.js'",
+    "test:v16p": "cypress run --spec 'cypress/e2e/v16-polished/**/*.cy.js'"
   },
   "devDependencies": {
     "cypress": "^13.15.0",
