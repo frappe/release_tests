@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 try:  # py311+
     import tomllib
@@ -27,6 +28,10 @@ class Target:
     api_key: str | None = None
     api_secret: str | None = None
     host_header: str | None = None
+    # Opt-in, because the customisations suite *writes* schema to the target:
+    # custom fields, scripts and DocTypes. Off by default so running "all suites"
+    # against an ordinary site can never customise it by accident.
+    allow_customisations: bool = False
 
     def __post_init__(self) -> None:
         if self.auth not in ("login", "token"):
@@ -35,6 +40,23 @@ class Target:
             raise ValueError(f"target {self.label!r}: login auth requires username + password")
         if self.auth == "token" and not (self.api_key and self.api_secret):
             raise ValueError(f"target {self.label!r}: token auth requires api_key + api_secret")
+
+
+def as_bool(value: Any) -> bool:
+    """Parse an opt-in flag strictly.
+
+    ``bool("false")`` is True, so a caller passing the *string* "false" or "0"
+    through a JSON/TOML boundary would silently opt in. Anything not recognised as
+    affirmative is False — for a flag that authorises writing schema to someone's
+    site, guessing wrong in the permissive direction is the expensive mistake.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value == 1
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
 
 
 def _resolve(value: str | None) -> str | None:
@@ -64,6 +86,7 @@ def load_targets(path: str | Path) -> list[Target]:
                 api_key=_resolve(raw.get("api_key")),
                 api_secret=_resolve(raw.get("api_secret")),
                 host_header=raw.get("host_header"),
+                allow_customisations=as_bool(raw.get("allow_customisations")),
             )
         )
     return targets
@@ -89,4 +112,7 @@ def connect(target: Target):
         client.use_token(target.api_key, target.api_secret)  # type: ignore[arg-type]
     else:
         client.login(target.username, target.password)  # type: ignore[arg-type]
+    # Carried on the client because a suite's steps receive the client, not the
+    # Target; this is how the customisations suite sees its opt-in.
+    client.allow_customisations = target.allow_customisations
     return client

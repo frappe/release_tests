@@ -1,0 +1,18 @@
+[
+  {
+    "doc_type": "Sales Invoice",
+    "doctype_or_field": "DocField",
+    "field_name": "po_no",
+    "property": "label",
+    "property_type": "Data",
+    "value": "RT PO Ref"
+  },
+  {
+    "doc_type": "Item",
+    "doctype_or_field": "DocField",
+    "field_name": "item_group",
+    "property": "in_list_view",
+    "property_type": "Check",
+    "value": "1"
+  }
+]

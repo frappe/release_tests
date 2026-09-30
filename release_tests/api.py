@@ -7,9 +7,10 @@ background job) never needs to touch the engine's dataclasses.
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
-from .config import Target, connect
+from .config import Target, as_bool, connect
 from .runner import run_target
 from .suites import all_suites
 
@@ -32,6 +33,7 @@ def catalog() -> list[dict[str, Any]]:
                 "required_app": suite.required_app,
                 "description": getattr(suite, "description", "") or "",
                 "steps": steps,
+                "guards": list(getattr(suite, "guards", []) or []),
             }
         )
     return entries
@@ -47,6 +49,7 @@ def _target_from_config(site_config: dict[str, Any]) -> Target:
         api_key=site_config.get("api_key"),
         api_secret=site_config.get("api_secret"),
         host_header=site_config.get("host_header"),
+        allow_customisations=as_bool(site_config.get("allow_customisations")),
     )
 
 

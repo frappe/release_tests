@@ -1,0 +1,9 @@
+[
+  {
+    "name": "RT Sales Invoice Form",
+    "dt": "Sales Invoice",
+    "view": "Form",
+    "enabled": 1,
+    "script": "// Verified through the Cypress layer (ui/cypress/e2e/v16/05-customisations.cy.js).\n// The HTTP engine cannot run browser JS, so this script's only proof of life is\n// the button and the indicator appearing on a real form.\nfrappe.ui.form.on(\"Sales Invoice\", {\n\trefresh(frm) {\n\t\tfrm.add_custom_button(\"RT Release Check\", () => {\n\t\t\tfrm.set_value(\"rt_release_ref\", \"RT-CLIENT-\" + (frm.doc.customer || \"NA\"));\n\t\t\tfrappe.show_alert({ message: \"RT client script ran\", indicator: \"green\" });\n\t\t});\n\t\tfrm.page.set_indicator(\"RT customised\", \"blue\");\n\t},\n});\n"
+  }
+]

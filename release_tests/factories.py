@@ -8,6 +8,7 @@ never piles up duplicate master data.
 from __future__ import annotations
 
 import json
+import secrets
 from typing import Any
 
 from .client import FrappeClient
@@ -801,3 +802,59 @@ def ensure_builder_page(client: FrappeClient) -> dict[str, Any]:
     }
     created = client.insert(doc)
     return {"name": created["name"], "route": created.get("route"), "published": created.get("published")}
+
+
+# ----------------------------------------------------------- limited-role user
+RT_LIMITED_USER = "release.limited@example.com"
+# Deliberately ordinary roles. Never System Manager — that bypasses the very
+# checks these regressions were about.
+RT_LIMITED_ROLES = ("Sales User",)
+
+# Regenerated per process, never written down. A fixed password committed here
+# would be a working credential on every site the suite has ever touched, for
+# anyone who can read the repo; the suite only needs it for the login it performs
+# moments later in the same run.
+_LIMITED_PASSWORD = secrets.token_urlsafe(24) + "aA1!"
+
+
+def limited_password() -> str:
+    """The current run's password for :data:`RT_LIMITED_USER`."""
+    return _LIMITED_PASSWORD
+
+
+def ensure_limited_user(client: FrappeClient) -> str:
+    """Get-or-create a non-System-Manager user, and set this run's password on it.
+
+    The permission-hardening regressions upstream all look identical from an
+    Administrator session — Administrator bypasses the checks that broke. Proving
+    those flows still work needs a genuinely restricted login, so this user carries
+    ordinary roles only and never System Manager.
+
+    The password is rotated on every run rather than fixed, so the account left
+    behind on a target is not usable by anyone holding a copy of this repository.
+    """
+    existing = client.get_list(
+        "User", filters={"name": RT_LIMITED_USER}, fields=["name"], limit=1
+    )
+    if not existing:
+        client.insert(
+            {
+                "doctype": "User",
+                "email": RT_LIMITED_USER,
+                "first_name": "Release",
+                "last_name": "Limited",
+                "send_welcome_email": 0,
+                "new_password": _LIMITED_PASSWORD,
+                "roles": [{"role": role} for role in RT_LIMITED_ROLES],
+            }
+        )
+        return RT_LIMITED_USER
+
+    client.call(
+        "frappe.client.set_value",
+        doctype="User",
+        name=RT_LIMITED_USER,
+        fieldname="new_password",
+        value=_LIMITED_PASSWORD,
+    )
+    return RT_LIMITED_USER
