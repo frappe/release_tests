@@ -33,30 +33,51 @@ Cypress.Commands.add("apiLogin", (usr, pwd) => {
 //    our own query's results ever render — "no request ever occurred" even though
 //    one did, just not the one we meant.
 //
-// 3. Selecting via ArrowDown+Enter on the focused input (the original approach,
-//    chosen to avoid clicking the floating suggestion — presumably because an
-//    earlier version of this file saw the same "floating dropdown hidden/covered"
-//    problem as #1) turned out to not reliably commit either: debug screenshots
-//    caught the dropdown still open with the raw typed text still in the input
-//    after the keystrokes were sent. Now that we assert the exact suggestion is
-//    on-screen *before* acting on it, clicking it directly is the unambiguous,
-//    deterministic way to select it — no dependence on keyboard-driven awesomplete
-//    state or focus timing. The click is a plain, unforced click: if fixed chrome
-//    (or anything else) still covers the suggestion despite the centering above,
-//    Cypress's own actionability check should fail loudly rather than click
-//    through it silently.
+// 3. `ul[role="listbox"] [role="option"]` (and even a plain `<ul>`, and even
+//    `.closest(".awesomplete")`'s own subtree) all assumed something about
+//    where the suggestion actually lives in the DOM. Link fields configured to
+//    also show a description (seen live on an Item field: code + "Release
+//    Stock Item, All Item Groups" + a "Filtered by…" hint + "Create a new
+//    Item"/"Advanced Search" links) render a richer, custom-built popup that —
+//    confirmed by screenshots showing the exact text on screen while every one
+//    of those scoped queries still found zero matches — isn't even nested
+//    inside `.awesomplete`; that class gets reused for positioning only. Search
+//    for the value at document scope instead of guessing at containment. This
+//    is safe here specifically because these values are distinctive test
+//    fixtures (item codes, customer names) that won't coincidentally appear
+//    elsewhere on the page — unlike a generic word, which is a real risk (see
+//    the CRM spec's Status-field comment for a case where it bit us).
+//
+// 4. Between a real (cypress-real-events) click on the matched suggestion and
+//    keyboard selection (ArrowDown+Enter), only the click actually commits
+//    anything: the grid cell re-renders as "code: title", proving the field's
+//    raw value got set. Keyboard selection on this specific rich, site-
+//    customized popup left the dropdown open with the raw typed text still in
+//    the input — worse, not better. The click also does correctly trigger
+//    Frappe's own item-selected fetch (rate + tax template), but not
+//    synchronously — see waitForItemRate below, which is why selecting an item
+//    needs an explicit wait for that fetch to land before saving.
 Cypress.Commands.add("selectLink", (selector, value) => {
   cy.get(selector).first().scrollIntoView({ block: "center", inline: "center" }).should("be.visible").click();
   cy.wait(200); // let the control open before typing, else the first keystrokes get dropped
   cy.get(selector).first().should("be.visible").clear().type(value, { delay: 60 });
-  cy.get(selector)
-    .first()
-    .closest(".awesomplete")
-    .find('ul[role="listbox"] [role="option"]')
-    .contains(value, { matchCase: false, timeout: 20000 })
-    .scrollIntoView({ block: "center" })
-    .should("be.visible")
-    .click();
+  cy.contains(value, { matchCase: false, timeout: 20000 }).scrollIntoView({ block: "center" }).should("be.visible").realClick();
+});
+
+// Selecting an Item in a Sales Invoice row triggers an async server fetch for
+// its rate + tax template (and anything else the item's price list / GSTIN
+// setup drives) — it does not arrive synchronously with the selection itself.
+// Saving right after fillGridLink (before that fetch lands) produces a "valid"
+// but empty invoice: item set correctly, but Rate stays 0 and no tax template
+// ever gets applied, so a GST invoice never gets a tax row to prove the
+// template worked. Wait for the Rate cell to actually show a real value first.
+Cypress.Commands.add("waitForItemRate", (gridFieldname, rowIdx) => {
+  cy.get(`[data-fieldname="${gridFieldname}"] .grid-body .grid-row[data-idx="${rowIdx}"] [data-fieldname="rate"]`, {
+    timeout: 20000,
+  }).should(($el) => {
+    const rate = parseFloat(($el.text() || "0").replace(/[^0-9.]/g, ""));
+    expect(rate, "item rate fetched").to.be.greaterThan(0);
+  });
 });
 
 // Convenience for a top-level form Link field, by fieldname.

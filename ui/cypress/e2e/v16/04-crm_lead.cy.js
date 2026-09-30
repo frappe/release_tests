@@ -30,15 +30,41 @@ describe("v16 · CRM Lead", () => {
         .first()
         .clear()
         .type(Cypress.env("crm_lead_email"));
-      // KNOWN LIMITATION, not fixed here: this modal's Status field is mandatory
-      // with no default, so submitting without setting it throws "Status is
-      // required". Selecting it isn't a plain text match: a document-wide
-      // cy.contains() for the option text also matches the Leads list's own
-      // background Status *filter* dropdown (present in the DOM behind the
-      // modal), so the popover needs to be scoped precisely — e.g. via the
-      // trigger's aria-controls, or the popover's own role/data attribute —
-      // before this can select the modal's own field reliably.
-      cy.contains("button", /create|save/i).click();
+    });
+
+    // The Status field is mandatory with no default in this quick-entry modal —
+    // submitting without it throws "Status is required". A document-wide text
+    // match for "New" isn't safe: the Leads list has its own background Status
+    // *filter* dropdown in the same DOM (confirmed by watching it end up set to
+    // "New" while the modal's own field stayed empty), so scope via the
+    // trigger's aria-controls instead of guessing at the popover library's own
+    // markup.
+    //
+    // Neither a synthetic Cypress .click() nor keyboard Enter on the focused,
+    // correctly-scoped option actually committed the selection (confirmed via a
+    // debug capture: focus does land on the right [role="option"], but <body>
+    // stayed stuck at pointer-events:none afterwards, and forcing past that
+    // still hit "Status is required" — the value genuinely never changed).
+    // This custom dropdown reacts only to trusted, OS-level input, not
+    // Cypress's default synthetic events — cypress-real-events dispatches those
+    // via the browser's real input pipeline (CDP), which is what actually
+    // triggers this component's selection and its own outside-click-to-close
+    // handling correctly.
+    let statusPopoverId = null;
+    cy.get('[role="dialog"], .modal')
+      .contains(/^status$/i)
+      .realClick()
+      .then(($el) => {
+        statusPopoverId = $el.attr("aria-controls") || $el.closest("[aria-controls]").attr("aria-controls");
+      });
+    cy.then(() => {
+      (statusPopoverId ? cy.get(`#${statusPopoverId}`) : cy.get('[data-state="open"]').last())
+        .contains(/^new$/i, { timeout: 10000 })
+        .should("be.visible")
+        .realClick();
+    });
+    cy.get('[role="dialog"], .modal').within(() => {
+      cy.contains("button", /create|save/i).realClick();
     });
 
     // The new lead's email should now appear (list row or detail).

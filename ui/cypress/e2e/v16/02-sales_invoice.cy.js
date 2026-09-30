@@ -13,6 +13,7 @@ describe("v16 · Sales Invoice", () => {
     // Fill the item into row 1, which the grid already renders empty by default —
     // clicking `.grid-add-row` here would append an unwanted row 2 instead.
     cy.fillGridLink("items", 1, "item_code", Cypress.env("item"));
+    cy.waitForItemRate("items", 1);
 
     // Save (Ctrl/Cmd+S) and confirm it left the "New" state (got a name).
     cy.get("body").type("{ctrl}s");
