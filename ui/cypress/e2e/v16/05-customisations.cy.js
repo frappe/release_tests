@@ -59,10 +59,17 @@ describe("v16 · customisation layer", () => {
     );
 
     // Child table on a wholly custom DocType.
-    cy.get('[data-fieldname="notes"] .grid-add-row', { timeout: 20000 }).click();
-    cy.get('[data-fieldname="notes"] .grid-body [data-fieldname="item_code"] input:visible')
-      .first()
-      .type(Cypress.env("item"));
+    //
+    // Fill the grid's existing empty row 1 rather than clicking .grid-add-row,
+    // which appends a row 2 and leaves row 1 blank (see cy.fillGridLink and its
+    // note in support/commands.js). The cell renders as a static div until it is
+    // clicked into edit mode, so click it open before typing. This does not use
+    // fillGridLink itself because that drives a Link field's autocomplete, and
+    // RT Release Note Item.item_code is a plain Data field with no suggestions.
+    const cell =
+      '[data-fieldname="notes"] .grid-body .grid-row[data-idx="1"] [data-fieldname="item_code"]';
+    cy.get(cell, { timeout: 20000 }).scrollIntoView({ block: "center" }).should("be.visible").click();
+    cy.get(`${cell} input:visible`).type(Cypress.env("item"));
 
     cy.get("body").type("{ctrl}s");
     cy.get(".title-area .title-text", { timeout: 30000 })
