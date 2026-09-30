@@ -64,35 +64,6 @@ Cypress.Commands.add("selectLink", (selector, value) => {
   cy.contains(value, { matchCase: false, timeout: 20000 }).scrollIntoView({ block: "center" }).should("be.visible").realClick();
 });
 
-// Selecting an Item in a Sales Invoice row triggers an async server fetch for
-// its rate + tax template (and anything else the item's price list / GSTIN
-// setup drives) — it does not arrive synchronously with the selection itself.
-// Saving right after fillGridLink (before that fetch lands) produces a "valid"
-// but empty invoice: item set correctly, but Rate stays whatever it was before
-// the fetch landed.
-//
-// This used to assert Rate > 0, which is wrong: a site can legitimately have
-// no Item Price configured for a test item, in which case Rate 0 *is* the
-// correct, fully-fetched result — that assertion would time out forever on
-// such a site even though nothing is broken (a real review finding). There's
-// no version-agnostic network signal to wait on instead without risking the
-// same alias cross-contamination problem documented on selectLink above (the
-// generic "link changed, fetch dependents" call also fires for non-Item
-// fields). So wait for the rendered value to stop changing across consecutive
-// checks instead: that's a genuine, value-agnostic "the async fetch has
-// settled" signal, whether it ultimately landed on a real price or on zero.
-Cypress.Commands.add("waitForItemRate", (gridFieldname, rowIdx) => {
-  const rateCell = `[data-fieldname="${gridFieldname}"] .grid-body .grid-row[data-idx="${rowIdx}"] [data-fieldname="rate"]`;
-  let previousText = null;
-  let stableChecks = 0;
-  cy.get(rateCell, { timeout: 20000 }).should(($el) => {
-    const currentText = $el.text();
-    stableChecks = currentText === previousText ? stableChecks + 1 : 0;
-    previousText = currentText;
-    expect(stableChecks, "rate value has settled").to.be.gte(2);
-  });
-});
-
 // Convenience for a top-level form Link field, by fieldname.
 Cypress.Commands.add("fillLink", (fieldname, value) => {
   cy.selectLink(`[data-fieldname="${fieldname}"] input:visible`, value);
@@ -106,8 +77,40 @@ Cypress.Commands.add("fillLink", (fieldname, value) => {
 // `<input>`. Specs used to click `.grid-add-row` first, which doesn't touch row 1
 // at all — it *appends a new row* (row 2), so the value ended up one row below
 // where every downstream assertion expected it. Click row 1's own cell instead.
+//
+// Selecting an Item here also triggers an async server fetch for its rate +
+// tax template, which doesn't land synchronously with the click. We register
+// the intercept *before* triggering that click (not inside waitForItemRate,
+// which runs after — by then the request may already have fired, and the
+// intercept would never see it) so waitForItemRate can wait on the real fetch
+// completing.
+//
+// Waiting on the *rendered value* instead (an earlier version of this fix)
+// looks appealing but is genuinely broken: before the fetch response arrives,
+// the cell can sit at its pre-fetch "0.00" default across several consecutive
+// polls just as validly as it would once truly settled post-fetch — a value-
+// only check can't tell "hasn't started" from "finished" apart (a real review
+// finding). Waiting on the actual request removes that ambiguity. This is
+// more targeted than the search_link alias problem documented on selectLink
+// above: this intercept is registered immediately before the one click that
+// triggers it and consumed immediately after, rather than left open across a
+// whole test where unrelated fields' calls could land first.
+//
+// The endpoint itself isn't stable across versions: v16 fires the generic
+// frappe.client.validate_link_and_fetch, but the same interaction on v15
+// never calls it at all ("No request ever occurred") — v15 uses the older,
+// item-specific erpnext.stock.get_item_details.get_item_details instead.
+// Match either under the one alias rather than hardcode a single version's.
 Cypress.Commands.add("fillGridLink", (gridFieldname, rowIdx, cellFieldname, value) => {
   const cell = `[data-fieldname="${gridFieldname}"] .grid-body .grid-row[data-idx="${rowIdx}"] [data-fieldname="${cellFieldname}"]`;
+  cy.intercept(
+    "POST",
+    "**/api/method/{frappe.client.validate_link_and_fetch,erpnext.stock.get_item_details.get_item_details}*"
+  ).as("gridLinkFetch");
   cy.get(cell).scrollIntoView({ block: "center" }).should("be.visible").click();
   cy.selectLink(`${cell} input:visible`, value);
+});
+
+Cypress.Commands.add("waitForItemRate", () => {
+  cy.wait("@gridLinkFetch", { timeout: 20000 });
 });

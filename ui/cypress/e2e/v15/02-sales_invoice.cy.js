@@ -12,7 +12,7 @@ describe("v15 · Sales Invoice", () => {
     cy.fillLink("customer", Cypress.env("customer"));
 
     cy.fillGridLink("items", 1, "item_code", Cypress.env("item"));
-    cy.waitForItemRate("items", 1);
+    cy.waitForItemRate();
 
     cy.get("body").type("{ctrl}s");
     cy.get(".title-area .title-text", { timeout: 30000 })
