@@ -4,9 +4,15 @@ describe("v16 · Login", () => {
     cy.visit("/login");
     cy.get("#login_email", { timeout: 20000 }).should("be.visible").type(Cypress.env("admin_user"));
     cy.get("#login_password").type(Cypress.env("admin_password"), { log: false });
-    // The page carries a hidden duplicate .btn-login (legacy markup); only the
-    // visible one (labelled "Continue" on this site) is the real submit button.
-    cy.get(".btn-login:visible").click();
+    // The submit control's markup isn't stable across sites. It used to carry
+    // a .btn-login class (sometimes duplicated, with a hidden legacy copy —
+    // see git history), which this site's newer login page doesn't have at
+    // all. Nor is it necessarily a real <button> tag — `cy.contains("button",
+    // ...)` still found nothing even though "Continue" is clearly visible on
+    // screen, meaning this frontend renders it as some other element styled to
+    // look like a button. Match the visible text directly, with no tag
+    // constraint, covering the common wordings across sites/versions.
+    cy.contains(/^(continue|log\s*in|sign\s*in)$/i).click();
     // Frappe lands somewhere authenticated after login — /app or /desk depending
     // on version, but a site with Helpdesk (or another) configured as the default
     // workspace can redirect elsewhere again (e.g. /helpdesk/home). Asserting we
