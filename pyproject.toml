@@ -33,6 +33,13 @@ path = "release_tests/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["release_tests"]
 
+# Required by bench / Frappe Cloud to pick a compatible Frappe version. Without
+# this section "Add app from GitHub" refuses the repo. The harness does not import
+# frappe — this declares which bench the app may be installed into, not a runtime
+# dependency of the engine.
+[tool.bench.frappe-dependencies]
+frappe = ">=15.0.0,<17.0.0"
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
