@@ -4,15 +4,30 @@ describe("v16 · Login", () => {
     cy.visit("/login");
     cy.get("#login_email", { timeout: 20000 }).should("be.visible").type(Cypress.env("admin_user"));
     cy.get("#login_password").type(Cypress.env("admin_password"), { log: false });
-    // The submit control's markup isn't stable across sites. It used to carry
-    // a .btn-login class (sometimes duplicated, with a hidden legacy copy —
-    // see git history), which this site's newer login page doesn't have at
-    // all. Nor is it necessarily a real <button> tag — `cy.contains("button",
-    // ...)` still found nothing even though "Continue" is clearly visible on
-    // screen, meaning this frontend renders it as some other element styled to
-    // look like a button. Match the visible text directly, with no tag
-    // constraint, covering the common wordings across sites/versions.
-    cy.contains(/^(continue|log\s*in|sign\s*in)$/i).click();
+    // The submit button's markup isn't stable across sites (it used to carry a
+    // .btn-login class, sometimes duplicated with a hidden legacy copy — see
+    // git history — which a newer login page doesn't have at all), so match by
+    // its visible text instead. That's trickier than it looks, confirmed by
+    // inspecting this exact page's DOM directly:
+    //   - The real button's text is "\n\t\tContinue" (framework-inserted
+    //     whitespace) — cy.contains(/^continue$/i) anchored against that raw,
+    //     untrimmed text finds nothing at all.
+    //   - Dropping the anchors to work around that opens a worse hole: this
+    //     page's own subtitle — "Welcome! Please sign in to continue." —
+    //     contains "continue" too, and sits earlier in the DOM than the
+    //     button. cy.contains() silently matched *that* paragraph instead
+    //     (also previously true of a "Sign In" heading with a "sign in"
+    //     alternative) — clicking it does nothing, which is exactly the
+    //     symptom we saw: the form stayed fully filled in after "submitting",
+    //     no error, no navigation.
+    // A .filter() predicate that trims each candidate's own text before an
+    // exact match avoids both problems at once, scoped to elements that are
+    // actually clickable controls so a paragraph can't qualify regardless of
+    // its text.
+    cy.get("button, [role='button'], input[type='submit']")
+      .filter((_, el) => /^(continue|log\s*in)$/i.test((el.textContent || "").trim()))
+      .first()
+      .click();
     // Frappe lands somewhere authenticated after login — /app or /desk depending
     // on version, but a site with Helpdesk (or another) configured as the default
     // workspace can redirect elsewhere again (e.g. /helpdesk/home). Asserting we
