@@ -38,7 +38,15 @@ packages = ["release_tests"]
 # frappe — this declares which bench the app may be installed into, not a runtime
 # dependency of the engine.
 [tool.bench.frappe-dependencies]
-frappe = ">=15.0.0,<17.0.0"
+# The "-dev" lower bound is load-bearing, not cosmetic. Frappe Cloud compares with
+# prerelease-aware semantics, where a develop build reporting 17.0.0-dev does NOT
+# satisfy "<17.0.0" — you have to opt into prereleases explicitly. A bench on
+# develop was refused with:
+#   Incompatible app version found, release_manager, frappe, 17.0.0-dev, >=16.0.0,<17.0.0
+# The range is deliberately wide here: this harness never imports frappe, and it
+# exists to be pointed at v15, v16 and develop sites alike, so the bench's own
+# frappe version is close to irrelevant to it.
+frappe = ">=15.0.0-dev,<18.0.0"
 
 [tool.ruff]
 line-length = 100
