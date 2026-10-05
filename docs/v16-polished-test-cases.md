@@ -122,6 +122,10 @@ permissions change. It needs `allow_customisations = true` on the target.
 | 04-settings-dialog | admin vs sales_mgr | Roles and User Permissions tabs only for System Manager |
 | 05-print-and-attachments | accounts, sales | draft Sales Invoice in the new format; attachment preview pane |
 | 06-session-and-impersonation | guest, sales, admin | logged-out redirect; "Session Expired" in an open tab; Impersonate banner and Activity Log entry |
+| 07-user-settings | admin | avatar → Settings opens the user settings dialog with all nine sections; tabs switch |
+| 08-manage-dock | admin | avatar → Manage Dock opens the dock arrangement editor with the standard module entries |
+| 09-documentation-link | admin | the list view menu's "Documentation" entry (external link icon) is present |
+| 10-text-editor-field | admin | the redesigned Text Editor field renders its Quill-based toolbar and accepts typed text |
 
 ## Not covered here
 
@@ -129,3 +133,12 @@ These are covered by Frappe's own polished Cypress suite (`frappe/cypress/integr
 or are purely visual: Espresso component styling, grid column widths and bulk edit,
 tree hover cards, Kanban virtual scrolling, address/contact card layout, calendar and
 Gantt, dark mode and RTL styling, and the full data import wizard walkthrough.
+
+Also not yet covered, left for a follow-up: the **Related Reports dropdown** in Report
+View (frappe#41165) — it doesn't appear on a plain DocType report view (tried ToDo and
+Sales Invoice); it likely only shows on an actual saved Report record, which needs more
+investigation than this pass had room for. The **Persistent Announcement Widget**
+(frappe#36768), **better email composer** (frappe#42170), and **new Kanban board**
+(frappe#41412, beyond the virtual-scrolling exclusion above) are real 16.37.0 features
+with no spec here yet either — same reason, not enough confidence in where their UI
+surfaces without further live investigation.
