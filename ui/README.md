@@ -39,6 +39,50 @@ Release Manager (`run.js` sets `video: true`).
 There is no local v15 site on this one-app-version bench, so the **v15 specs are
 structure-only** until you point `CYPRESS_BASE_URL` at a real v15 site.
 
+## Choosing which tests run (Release Manager)
+
+Every spec declares its app on its **first line**:
+
+```js
+// @app erpnext
+```
+
+Release Manager reads that tag to fill the **App** and **Test suites** pickers on
+its New Run page (UI mode). New specs appear there automatically, so tag every
+new spec; an untagged one is listed under `frappe`. Suites whose app the site
+doesn't have (per the site's last "Test Connection") start unticked.
+
+A site on `v16-polished` lists the `v16-polished` specs plus the plain `v16`
+ones, because polished keeps v16's flows. To run a selection outside Release
+Manager, set `SPECS` (comma-separated paths) for `run.js`, or pass
+`--spec <path>` to `cypress run`.
+
+## Flow specs
+
+`v16/06-purchase_cycle.cy.js` works a buying cycle the way a purchase user does:
+Material Request → Purchase Order → Purchase Receipt → Purchase Invoice →
+Payment. Each next document comes from the previous one's **Create** menu, and
+the spec ends by checking that the invoice is Paid and the Material Request and
+Purchase Order are fully ordered, received and billed. It uses the supplier and
+stock item that the API suites create (`CYPRESS_SUPPLIER`, `CYPRESS_ITEM`).
+
+The shared steps live in `cypress/support/commands.js`:
+
+- `saveForm`: clicks Save, not Ctrl+S, which means *submit* on a saved form.
+- `submitForm`: clicks Submit and confirms the prompt.
+- `createFrom`: opens the next document from the Create menu.
+
+Two waits are deliberate. Both stop the test acting faster than a person can,
+which otherwise causes failures no user would see:
+
+- before saving, it waits for the page's lookups to finish (`data-ajax-state`);
+- before confirming, it waits for the prompt to finish opening.
+
+A problem a user *would* hit but can work around, such as a form showing
+"Not Saved" straight after a save, is recorded as a finding. The flow then
+carries on, and the spec fails at the end listing every finding, so the rest
+of the process is still tested.
+
 ## macOS: bench must run in a GUI Terminal
 Cypress is an Electron app. On **macOS** it can only launch inside a GUI (Aqua)
 session — even in headless mode there is no `xvfb`. So when you trigger UI tests

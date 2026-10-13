@@ -1,3 +1,4 @@
+// @app erpnext
 // v16 · the customisation layer, as a real browser sees it.
 //
 // The HTTP engine can prove the Client Script *record* survived an upgrade, but

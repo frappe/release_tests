@@ -1,3 +1,4 @@
+// @app erpnext
 // v15 · create a Sales Invoice through the Desk UI using existing master data.
 // NOTE: v15's form/grid DOM can differ from v16 — validate + adjust selectors
 // against a real v15 site when one is available. Kept separate from v16 on purpose.

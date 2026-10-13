@@ -1,3 +1,4 @@
+// @app frappe
 // v15 · login page test.
 // Structure mirrors v16; selectors are the same for the login page across v15/v16,
 // but keep this file separate so version-specific tweaks stay isolated.

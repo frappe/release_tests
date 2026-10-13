@@ -3,6 +3,8 @@
 // Frappe side parses into Test Result records. Configured entirely via env vars.
 //
 //   SPEC_DIR      cypress/e2e/v16   (which version's specs to run)
+//   SPECS         optional comma-separated spec paths (relative to ui/) chosen in
+//                 Release Manager; when set, only these run instead of SPEC_DIR
 //   RESULT_FILE   absolute path to write the results JSON to
 //   HEADED        "1" (default) shows the browser; "0" runs headless
 //   CY_BROWSER    electron (default) | chrome
@@ -12,6 +14,11 @@ const cypress = require("cypress");
 const fs = require("fs");
 
 const specDir = process.env.SPEC_DIR || "cypress/e2e/v16";
+// The user's selection, if any. Cypress takes a comma-separated list of paths.
+const chosenSpecs = (process.env.SPECS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const resultFile = process.env.RESULT_FILE || "cy-results.json";
 
 function summarise(results) {
@@ -38,7 +45,7 @@ function summarise(results) {
 
 cypress
   .run({
-    spec: `${specDir}/**/*.cy.js`,
+    spec: chosenSpecs.length ? chosenSpecs.join(",") : `${specDir}/**/*.cy.js`,
     headed: process.env.HEADED !== "0",
     browser: process.env.CY_BROWSER || "electron",
     config: { video: true },

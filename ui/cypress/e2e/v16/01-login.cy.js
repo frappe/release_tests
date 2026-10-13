@@ -1,3 +1,4 @@
+// @app frappe
 // v16 · login page test
 describe("v16 · Login", () => {
   it("logs in through the login page and lands on the Desk", () => {

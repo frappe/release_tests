@@ -1,3 +1,4 @@
+// @app india_compliance
 // v16 · India Compliance — create a GST Sales Invoice through the Desk UI.
 // Selects the GST customer + a GST item (with an Item Tax Template); India
 // Compliance applies the tax template from the company/customer GSTINs. The
