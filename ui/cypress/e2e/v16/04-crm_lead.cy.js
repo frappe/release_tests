@@ -1,3 +1,4 @@
+// @app crm
 // v16 · Frappe CRM — create a Lead through the CRM single-page app (/crm).
 // NOTE: the CRM SPA is a separate frontend from the Desk; these selectors are a
 // best-effort first draft (text/placeholder based) and may need tuning on the

@@ -27,6 +27,9 @@ module.exports = defineConfig({
     // Existing master data the invoice test reuses (must already exist on the site).
     customer: process.env.CYPRESS_CUSTOMER || "Release Test Customer",
     item: process.env.CYPRESS_ITEM || "RT-STOCK-ITEM",
+    // Purchase cycle (Material Request → … → Payment) — masters created by the API suites.
+    supplier: process.env.CYPRESS_SUPPLIER || "Release Test Supplier",
+    mode_of_payment: process.env.CYPRESS_MODE_OF_PAYMENT || "Cash",
     // India Compliance (GST) invoice test — masters created by the API suite.
     gst_customer: process.env.CYPRESS_GST_CUSTOMER || "Release GST Customer",
     gst_item: process.env.CYPRESS_GST_ITEM || "RT-GST-18",

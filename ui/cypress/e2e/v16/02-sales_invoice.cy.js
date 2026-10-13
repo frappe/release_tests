@@ -1,3 +1,4 @@
+// @app erpnext
 // v16 · create a Sales Invoice through the Desk UI using existing master data
 describe("v16 · Sales Invoice", () => {
   beforeEach(() => {

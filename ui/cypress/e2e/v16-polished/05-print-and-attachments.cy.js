@@ -1,3 +1,4 @@
+// @app erpnext
 // v16-polished · the new print formats and the attachment preview pane.
 describe("v16-polished · print [accounts]", () => {
   before(function () {

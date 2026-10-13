@@ -188,3 +188,106 @@ Cypress.Commands.add("skipUnlessPolished", (ctx) => {
     }
   });
 });
+
+// ------------------------------------------------------- document lifecycle
+// The steps every transaction goes through in the Desk, written once so a flow
+// spec reads as the business process: save, submit, then Create → next document.
+
+// Problems noticed mid-flow that a user would hit but can work around (e.g. a form
+// that flips back to "Not Saved"). They are recorded and the flow carries on, so
+// one problem doesn't leave the rest of the process untested; the spec then fails
+// at the end with every finding listed (see assertNoFindings).
+let findings = [];
+let saveCount = 0;
+Cypress.Commands.add("noteFinding", (text) => {
+  findings.push(text);
+  cy.log(`FINDING: ${text}`);
+});
+Cypress.Commands.add("assertNoFindings", () => {
+  cy.then(() => {
+    const found = findings;
+    findings = [];
+    expect(found, `issues a user would hit:\n- ${found.join("\n- ")}`).to.have.length(0);
+  });
+});
+
+// Save the open form with its primary "Save" button, and wait until it has left
+// the "New" state. Not Ctrl/Cmd+S: on a form that is already saved, that same
+// shortcut means *submit*, so a repeated keystroke opens a stray submit prompt.
+// If the form shows "Not Saved" again right after saving (scripts that run after
+// the save changed a value), that is noted as a finding and the form saved again.
+Cypress.Commands.add("saveForm", () => {
+  const clickSave = () => {
+    // A unique alias per save: reusing one lets the wait match an earlier save.
+    const alias = `savedocs${++saveCount}`;
+    cy.intercept("POST", "**/frappe.desk.form.save.savedocs").as(alias);
+    // Wait for the form's own lookups to finish first (picking a supplier fetches
+    // its details, including GST Category). Saving mid-lookup gets a refusal no
+    // person would see, since nobody clicks Save within milliseconds of a pick.
+    cy.get("body", { timeout: 30000 }).should("have.attr", "data-ajax-state", "complete");
+    cy.get(".page-actions .primary-action:visible", { timeout: 20000 })
+      .should("contain.text", "Save")
+      .click();
+    // If the server refuses the save, fail now with its own message (e.g. a
+    // mandatory field) instead of waiting for a form state that never comes.
+    cy.wait(`@${alias}`, { timeout: 60000 }).then(({ response }) => {
+      if (response && response.statusCode !== 200) {
+        const raw = JSON.stringify((response.body || {})._server_messages || response.body || "");
+        const message = raw.replace(/\\"/g, '"').replace(/<[^>]+>/g, "").slice(0, 400);
+        throw new Error(`Save refused (HTTP ${response.statusCode}): ${message}`);
+      }
+    });
+  };
+  clickSave();
+  cy.window({ timeout: 30000 }).should((win) => {
+    // is_new() is undefined, not false, once saved — compare as booleans.
+    expect(Boolean(win.cur_frm && win.cur_frm.is_new()), "form saved").to.eq(false);
+  });
+  cy.wait(2000); // let the scripts that run after a save settle
+  cy.window().then((win) => {
+    if (!win.cur_frm.is_dirty()) return;
+    cy.noteFinding(
+      `${win.cur_frm.doctype} ${win.cur_frm.doc.name} showed "Not Saved" right after being saved; ` +
+        "the user has to save it a second time before they can submit"
+    );
+    clickSave();
+  });
+  cy.window({ timeout: 30000 }).should((win) => {
+    expect(Boolean(win.cur_frm.is_dirty()), "no unsaved changes").to.eq(false);
+  });
+  cy.get(".modal:visible").should("not.exist");
+});
+
+// Submit through the primary button + the "Permanently Submit?" confirmation,
+// then wait for the dialog to close: anything under its overlay counts as hidden.
+Cypress.Commands.add("submitForm", () => {
+  cy.get(".page-actions .primary-action:visible", { timeout: 20000 })
+    .should("contain.text", "Submit")
+    .click();
+  // Wait for the prompt to finish fading in before answering it. A dialog asked to
+  // close mid-animation ignores the request, so a too-fast "Yes" submits the
+  // document but leaves the prompt open over the page. No person clicks that fast.
+  cy.get(".modal.show:visible", { timeout: 20000 }).should("have.css", "opacity", "1");
+  cy.contains(".modal:visible .btn-primary", "Yes").click();
+  // Generous: submitting posts stock and accounting entries, and a small dev
+  // server can take well over 30s for an invoice.
+  cy.window({ timeout: 120000 }).its("cur_frm.doc.docstatus").should("eq", 1);
+  cy.get(".modal:visible", { timeout: 20000 }).should("not.exist");
+});
+
+// Create → <label>: open the next document from the form's Create menu and wait
+// until the new (mapped) form of that DocType is showing.
+Cypress.Commands.add("createFrom", (label, doctype = label) => {
+  const group = '.inner-group-button[data-label="Create"]';
+  cy.get(`${group} button:visible`, { timeout: 20000 }).first().click();
+  cy.get(`${group} .dropdown-item[data-label="${encodeURIComponent(label)}"]:visible`)
+    .first()
+    .click();
+  cy.window({ timeout: 30000 }).should((win) => {
+    expect(win.cur_frm && win.cur_frm.doctype, `${doctype} form open`).to.eq(doctype);
+    expect(Boolean(win.cur_frm.is_new()), `new ${doctype} mapped from the previous document`).to.eq(true);
+  });
+});
+
+// The open form's document name, after save/submit — for later assertions.
+Cypress.Commands.add("currentDocName", () => cy.window().its("cur_frm.doc.name"));

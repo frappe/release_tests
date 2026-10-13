@@ -1,3 +1,4 @@
+// @app frappe
 // v16-polished · logged-out handling (frappe#37412) and Impersonate itself.
 describe("v16-polished · logged out", () => {
   before(function () {

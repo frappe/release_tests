@@ -1,3 +1,4 @@
+// @app frappe
 // v16-polished · new navigation, as an ordinary Sales User.
 // Shell-prefixed URLs, module sidebars, the notification panel and navbar search
 // are what every user meets first; a break here is a break for everyone.

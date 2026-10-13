@@ -1,3 +1,4 @@
+// @app frappe
 // v16-polished · what the UI hides by role (frappe#43044, frappe#42577).
 // Runs on the RT Perm Probe DocType the API suite creates (needs
 // allow_customisations on the target), so no real DocType's permissions change.

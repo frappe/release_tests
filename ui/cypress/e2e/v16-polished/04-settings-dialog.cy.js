@@ -1,3 +1,4 @@
+// @app frappe
 // v16-polished · DocType settings dialog: Roles / User Permissions tabs are for
 // System Managers only (frappe#41005, frappe#41832).
 //
