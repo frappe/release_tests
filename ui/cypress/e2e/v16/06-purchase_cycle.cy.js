@@ -67,7 +67,7 @@ describe("v16 · Purchase cycle", () => {
       const input = '[data-fieldname="mode_of_payment"] input:visible';
       cy.get(input).first().scrollIntoView({ block: "center" }).click();
       cy.get(input).first().clear().type(mode, { delay: 60 });
-      cy.contains(":visible", new RegExp(`^\\s*${mode}\\s*$`), { timeout: 20000 })
+      cy.contains(":visible", new RegExp(`^\\s*${Cypress._.escapeRegExp(mode)}\\s*$`), { timeout: 20000 })
         .last()
         .realClick();
     });
